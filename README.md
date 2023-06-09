@@ -10,7 +10,7 @@ Safely add, modify or deprecate columns, tables or streams while mantaining serv
 
 You can read more at https://marc-from-mg-eu.gitbook.io/metabolic/
 
-## Running metabaolic
+## Running metabolic
 
 To run a simple job in batch
 ````
