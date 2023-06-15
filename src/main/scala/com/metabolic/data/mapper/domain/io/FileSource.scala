@@ -7,6 +7,7 @@ case class FileSource(inputPath: String,
                       name: String,
                       format: IOFormat = DELTA,
                       useStringPrimitives: Boolean = false,
-                      ops: Seq[SourceOp] = Seq.empty
+                      ops: Seq[SourceOp] = Seq.empty,
+                      startTime: Option[String] = Option.empty
                       )
   extends Source

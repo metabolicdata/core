@@ -24,7 +24,6 @@ case class SourceConfigParserService()(implicit val region: Regions) extends Log
     val name = source.getString("name")
 
     val ops = checkOps(source)
-
     SourceFormatParser().parse(name, source, ops)
 
   }

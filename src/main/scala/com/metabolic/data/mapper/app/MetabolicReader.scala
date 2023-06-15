@@ -50,7 +50,7 @@ object MetabolicReader extends Logging {
       new ParquetReader(fileSource.inputPath)
         .read(spark, mode)
      case IOFormat.DELTA =>
-      new DeltaReader(fileSource.inputPath)
+      new DeltaReader(fileSource.inputPath, fileSource.startTime)
         .read(spark, mode)
     }
    }

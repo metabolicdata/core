@@ -30,8 +30,9 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
   private def parseDeltaSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val path = if(config.hasPathOrNull("inputPath")) { config.getString("inputPath")}
     else { config.getString("path") }
-    
-    FileSource(path, name, IOFormat.DELTA, false, ops)
+    val startingTime = if(config.hasPathOrNull("startTime")){Option.apply(config.getString("startingTime"))}
+    else{Option.empty}
+    FileSource(path, name, IOFormat.DELTA, false, ops, startingTime)
   }
 
   private def parseJsonSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
@@ -41,7 +42,7 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val useStringPrimitives = if(config.hasPathOrNull("useStringPrimitives")) { config.getBoolean("useStringPrimitives")}
     else { false }
 
-    FileSource(path, name, IOFormat.JSON, useStringPrimitives, ops)
+    FileSource(path, name, IOFormat.JSON, useStringPrimitives, ops, Option.empty)
   }
 
   private def parseCSVSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
@@ -51,14 +52,14 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val useStringPrimitives = if(config.hasPathOrNull("useStringPrimitives")) { config.getBoolean("useStringPrimitives")}
     else { false }
 
-    FileSource(path, name, IOFormat.CSV, useStringPrimitives, ops)
+    FileSource(path, name, IOFormat.CSV, useStringPrimitives, ops, Option.empty)
   }
 
   private def parseParquetSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val path = if(config.hasPathOrNull("inputPath")) { config.getString("inputPath")}
     else { config.getString("path") }
     
-    FileSource(path, name, IOFormat.PARQUET, false, ops)
+    FileSource(path, name, IOFormat.PARQUET, false, ops, Option.empty)
   }
 
   private def parseKafkaSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {

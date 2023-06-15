@@ -103,24 +103,6 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
 
     if (!DeltaTable.isDeltaTable(outputPath)) {
       if (!File(outputPath).exists) {
-        //In this way a table is created which can be read but the schema is not visible.
-        /*
-        //Check if the database has location
-        new GlueCatalogService()
-          .checkDatabase(dbName, ConfigUtilsService.getDataBaseName(outputPath))
-        //Create the delta table
-        val deltaTable = DeltaTable.createIfNotExists()
-          .tableName(dbName + "." + tableName)
-          .location(output_identifier)
-          .addColumns(df.schema)
-          .partitionedBy(partitionColumnNames: _*)
-          .execute()
-        deltaTable.toDF.write.format("delta").mode(SaveMode.Append).save(output_identifier)
-        //Create table in Athena (to see the columns)
-        new AthenaCatalogueService()
-          .createDeltaTable(dbName, tableName, output_identifier, true)*/
-
-        //Redo if the other way works for us
         // create an empty RDD with original schema
         val emptyRDD = spark.sparkContext.emptyRDD[Row]
         val emptyDF = spark.createDataFrame(emptyRDD, df.schema)
