@@ -30,7 +30,7 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
   private def parseDeltaSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val path = if(config.hasPathOrNull("inputPath")) { config.getString("inputPath")}
     else { config.getString("path") }
-    val startingTime = if(config.hasPathOrNull("startTime")){Option.apply(config.getString("startingTime"))}
+    val startingTime = if(config.hasPathOrNull("startTime")){Option.apply(config.getString("startTime"))}
     else{Option.empty}
     FileSource(path, name, IOFormat.DELTA, false, ops, startingTime)
   }
