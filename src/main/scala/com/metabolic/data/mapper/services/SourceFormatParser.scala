@@ -30,8 +30,8 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
   private def parseDeltaSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val path = if(config.hasPathOrNull("inputPath")) { config.getString("inputPath")}
     else { config.getString("path") }
-    val startingTime = if(config.hasPathOrNull("startTime")){Option.apply(config.getString("startTime"))}
-    else{Option.empty}
+    val startingTime = if(config.hasPathOrNull("startTime")){config.getString("startTime")}
+    else{""}
     FileSource(path, name, IOFormat.DELTA, false, ops, startingTime)
   }
 
@@ -42,7 +42,7 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val useStringPrimitives = if(config.hasPathOrNull("useStringPrimitives")) { config.getBoolean("useStringPrimitives")}
     else { false }
 
-    FileSource(path, name, IOFormat.JSON, useStringPrimitives, ops, Option.empty)
+    FileSource(path, name, IOFormat.JSON, useStringPrimitives, ops, "")
   }
 
   private def parseCSVSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
@@ -52,14 +52,14 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val useStringPrimitives = if(config.hasPathOrNull("useStringPrimitives")) { config.getBoolean("useStringPrimitives")}
     else { false }
 
-    FileSource(path, name, IOFormat.CSV, useStringPrimitives, ops, Option.empty)
+    FileSource(path, name, IOFormat.CSV, useStringPrimitives, ops, "")
   }
 
   private def parseParquetSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val path = if(config.hasPathOrNull("inputPath")) { config.getString("inputPath")}
     else { config.getString("path") }
     
-    FileSource(path, name, IOFormat.PARQUET, false, ops, Option.empty)
+    FileSource(path, name, IOFormat.PARQUET, false, ops, "")
   }
 
   private def parseKafkaSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {

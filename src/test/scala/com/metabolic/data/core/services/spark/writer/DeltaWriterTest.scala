@@ -129,7 +129,7 @@ class DeltaWriterTest extends AnyFunSuite
       StructType(someSchema)
     )
 
-    val outputDf = new DeltaReader(path, Option.empty)
+    val outputDf = new DeltaReader(path, "")
       .read(sqlCtx.sparkSession, EngineMode.Batch)
 
     outputDf.show(20, false)
@@ -203,7 +203,7 @@ class DeltaWriterTest extends AnyFunSuite
       StructType(someSchema)
     )
 
-    val outputDf = new DeltaReader(path, Option.empty)
+    val outputDf = new DeltaReader(path, "")
       .read(sqlCtx.sparkSession,EngineMode.Batch)
 
     outputDf.show(20, false)
@@ -275,7 +275,7 @@ class DeltaWriterTest extends AnyFunSuite
       StructType(someSchema)
     )
 
-    val outputDf = new DeltaReader(path,Option.empty)
+    val outputDf = new DeltaReader(path,"")
       .read(sqlCtx.sparkSession, EngineMode.Batch)
 
     outputDf.show(20, false)
@@ -352,7 +352,7 @@ class DeltaWriterTest extends AnyFunSuite
       StructType(someSchema)
     )
 
-    val outputDf = new DeltaReader(path,Option.empty)
+    val outputDf = new DeltaReader(path,"")
       .read(sqlCtx.sparkSession, EngineMode.Batch)
 
     outputDf.show(20, false)
@@ -397,7 +397,7 @@ class DeltaWriterTest extends AnyFunSuite
       .save(path)
 */
 
-    val outputDf = new DeltaReader(path,Option.empty)
+    val outputDf = new DeltaReader(path,"")
       .read(sqlCtx.sparkSession, EngineMode.Batch)
 
     println("SCHEMA: " + outputDf.schema.json)
@@ -420,7 +420,7 @@ class DeltaWriterTest extends AnyFunSuite
     firstWriter.write(inputDF, EngineMode.Batch)
 
     eventually(timeout(Span(5, Seconds))) {
-      val outputDf = new DeltaReader(path,Option.empty)
+      val outputDf = new DeltaReader(path,"")
         .read(sqlCtx.sparkSession, EngineMode.Batch)
       assertDataFrameNoOrderEquals(inputDF, outputDf)
     }
@@ -520,7 +520,7 @@ class DeltaWriterTest extends AnyFunSuite
     )
 
     eventually(timeout(Span(5, Seconds))) {
-      val outputDf = new DeltaReader(path,Option.empty)
+      val outputDf = new DeltaReader(path,"")
         .read(sqlCtx.sparkSession, EngineMode.Batch)
       assertDataFrameNoOrderEquals(inputDF, outputDf)
     }
@@ -646,7 +646,7 @@ class DeltaWriterTest extends AnyFunSuite
     )
 
     eventually(timeout(Span(30, Seconds))) {
-      val outputDf = new DeltaReader(path,Option.empty)
+      val outputDf = new DeltaReader(path,"")
         .read(sqlCtx.sparkSession, EngineMode.Batch)
       assertDataFrameNoOrderEquals(inputDF, outputDf)
     }
@@ -766,7 +766,7 @@ class DeltaWriterTest extends AnyFunSuite
     )
 
     eventually(timeout(Span(30, Seconds))) {
-      val outputDf = new DeltaReader(path,Option.empty)
+      val outputDf = new DeltaReader(path,"")
         .read(sqlCtx.sparkSession, EngineMode.Batch)
       assertDataFrameNoOrderEquals(inputDF, outputDf)
     }
