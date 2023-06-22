@@ -6,7 +6,7 @@ import org.apache.spark.sql.streaming.DataStreamReader
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 
-class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String)
+class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, offset: Option[String])
   extends DataframeUnifiedReader {
 
   override val input_identifier: String = topic
@@ -65,7 +65,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .option("subscribe", topic)
       .option("kafka.session.timeout.ms", 45000)
       .option("kafka.client.dns.lookup","use_all_dns_ips")
-      .option("startingOffsets", "latest")
+      .option("startingOffsets", if (offset.isDefined) offset.get else "latest")
       .option("failOnDataLoss", false)
 
 
@@ -83,7 +83,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .format("kafka")
       .option("kafka.bootstrap.servers", servers.mkString(","))
       .option("subscribe", topic)
-      .option("startingOffsets", "earliest")
+      .option("startingOffsets", if (offset.isDefined) offset.get else "earliest")
       .option("endingOffsets", "latest")
 
     val input = setDFAuthentication(plain)
@@ -96,5 +96,5 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
 }
 
 object KafkaReader {
-  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String) = new KafkaReader(servers, apiKey, apiSecret, topic)
+  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String, offset: Option[String]) = new KafkaReader(servers, apiKey, apiSecret, topic, offset)
 }

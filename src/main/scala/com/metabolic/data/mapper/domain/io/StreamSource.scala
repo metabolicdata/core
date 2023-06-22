@@ -8,6 +8,7 @@ case class StreamSource(name: String,
                         key: String,
                         secret: String,
                         topic: String,
+                        offset: Option[String],
                         format: IOFormat = KAFKA,
                         ops: Seq[SourceOp] = Seq.empty)
   extends Source

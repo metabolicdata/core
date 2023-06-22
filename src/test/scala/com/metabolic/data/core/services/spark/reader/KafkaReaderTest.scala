@@ -71,7 +71,7 @@ class KafkaReaderTest extends AnyFunSuite
       StructType(schema)
     )
 
-    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName)
+    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName, Option.empty)
     .read(spark, EngineMode.Batch)
     .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
 
