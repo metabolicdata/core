@@ -127,6 +127,8 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
   override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
     //Not for current version
     //deltaTable.optimize().executeCompaction()
+    //deltaTable.optimize().executeZOrderBy("column")
+
     query.flatMap(stream => Option.apply(stream.awaitTermination()))
     true
   }

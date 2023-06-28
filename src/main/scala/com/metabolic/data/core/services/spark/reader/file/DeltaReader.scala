@@ -3,6 +3,7 @@ package com.metabolic.data.core.services.spark.reader.file
 import com.metabolic.data.core.services.spark.reader.DataframeUnifiedReader
 import com.metabolic.data.mapper.app.MetabolicReader.logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import io.delta.tables._
 
 class DeltaReader(val input_identifier: String, val startTime: String) extends DataframeUnifiedReader {
 
@@ -13,9 +14,11 @@ class DeltaReader(val input_identifier: String, val startTime: String) extends D
 
     startTime match {
       case "" => spark.read.delta(input_identifier)
-      case _ => spark.read
-        .option("timestampAsOf", startTime)
-        .delta(input_identifier)
+      case _ => {
+        spark.read
+          .option("timestampAsOf", startTime)
+          .delta(input_identifier)
+      }
     }
   }
 
@@ -23,6 +26,7 @@ class DeltaReader(val input_identifier: String, val startTime: String) extends D
 
 
     print(s"Reading source ${input_identifier} starting from ${startTime}")
+
     spark.readStream
         .option("startingTimestamp", startTime)
         .delta(input_identifier)

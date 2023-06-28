@@ -86,7 +86,8 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
   override def preHook(df: DataFrame): DataFrame = {
 
     if (partitionColumnNames.size > 0) {
-      val tableName: String = ConfigUtilsService.getTablePrefix(namespaces, output_identifier)+ConfigUtilsService.getTableNameFileSink(output_identifier)
+      val prefix = ConfigUtilsService.getTablePrefix(namespaces, output_identifier)
+      val tableName: String = prefix+ConfigUtilsService.getTableNameFileSink(output_identifier)
 
       if (!DeltaTable.isDeltaTable(outputPath)) {
         if (!File(outputPath).exists) {
@@ -120,7 +121,9 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
           //Create table in Athena
           new AthenaCatalogueService()
             .createDeltaTable(dbName, tableName, output_identifier)
-
+          //Create table in Athena separate schema
+          new AthenaCatalogueService()
+            .createDeltaTable(dbName+"_"+ prefix.dropRight(1), tableName, output_identifier)
         } else {
           //Convert to delta if parquet
           DeltaTable.convertToDelta(spark, s"parquet.`$outputPath`")
@@ -136,8 +139,14 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
   }
 
   override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
-    //Not for current version
-    //deltaTable.optimize().executeCompaction()
+
+//    if (DeltaTable.isDeltaTable(output_identifier)) {
+//      val deltaTable = DeltaTable.forPath(output_identifier)
+//      deltaTable.optimize().executeCompaction()
+//
+//      logger.info("optimize with z order")
+//      deltaTable.optimize().executeZOrderBy(column_name)
+//    }
     query.flatMap(stream => Option.apply(stream.awaitTermination()))
 
     true

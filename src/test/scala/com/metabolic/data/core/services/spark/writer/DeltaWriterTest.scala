@@ -17,6 +17,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.streaming.{OutputMode, Trigger}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.junit.Ignore
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Futures.timeout
@@ -27,6 +28,7 @@ import java.util.Properties
 import scala.collection.JavaConverters._
 import scala.reflect.io.Directory
 import java.io.File
+
 
 class DeltaWriterTest extends AnyFunSuite
   with DataFrameSuiteBase
