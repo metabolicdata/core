@@ -12,7 +12,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
-import org.scalatest.{BeforeAndAfterAll, Ignore}
+import org.scalatest.{BeforeAndAfterAll}
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Futures.timeout
 import org.scalatest.funsuite.AnyFunSuite
