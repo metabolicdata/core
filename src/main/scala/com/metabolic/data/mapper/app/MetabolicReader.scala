@@ -16,7 +16,7 @@ object MetabolicReader extends Logging {
 
  def read(source: Source, historical: Boolean, mode: EngineMode)(implicit spark: SparkSession) = {
 
-  val input = readSource(source, mode, spark)
+  val input = readSource(source, historical, mode, spark)
 
   val prepared = prepareSource(source, historical, input)
 
@@ -24,14 +24,14 @@ object MetabolicReader extends Logging {
 
  }
 
- private def readSource(source: Source, mode: EngineMode, spark: SparkSession) = {
+ private def readSource(source: Source, historical: Boolean, mode: EngineMode, spark: SparkSession) = {
   source match {
 
    case streamSource: StreamSource => {
     logger.info(s"Reading stream source ${streamSource.name} from ${streamSource.topic}")
 
     streamSource.format match {
-     case IOFormat.KAFKA => new KafkaReader(streamSource.servers, streamSource.key, streamSource.secret, streamSource.topic)
+     case IOFormat.KAFKA => new KafkaReader(streamSource.servers, streamSource.key, streamSource.secret, streamSource.topic, historical)
        .read(spark, mode)
     }
    }
@@ -50,7 +50,7 @@ object MetabolicReader extends Logging {
       new ParquetReader(fileSource.inputPath)
         .read(spark, mode)
      case IOFormat.DELTA =>
-      new DeltaReader(fileSource.inputPath, fileSource.startTime)
+      new DeltaReader(fileSource.inputPath, historical)
         .read(spark, mode)
     }
    }
