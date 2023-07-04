@@ -99,8 +99,8 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
 
   override def preHook(df: DataFrame): DataFrame = {
 
-    val tableName: String = ConfigUtilsService.getTablePrefix(namespaces, output_identifier)+ConfigUtilsService.getTableNameFileSink(output_identifier)
-
+    val prefix = ConfigUtilsService.getTablePrefix(namespaces, output_identifier)
+    val tableName: String = prefix + ConfigUtilsService.getTableNameFileSink(output_identifier)
     if (!DeltaTable.isDeltaTable(outputPath)) {
       if (!File(outputPath).exists) {
         // create an empty RDD with original schema
@@ -114,6 +114,9 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
         //Create table in Athena
         new AthenaCatalogueService()
           .createDeltaTable(dbName, tableName, output_identifier)
+        //Create table in Athena separate schema
+        new AthenaCatalogueService()
+          .createDeltaTable(dbName + "_" + prefix.dropRight(1), tableName, output_identifier)
 
       } else {
         //Convert to delta if parquet
