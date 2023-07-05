@@ -154,7 +154,6 @@ class DeltaReaderTest extends AnyFunSuite
       StructType(someSchema)
     )
 
-
     val outputDf = spark.readStream
       .delta(delta_source_path)
       .writeStream
@@ -223,10 +222,74 @@ class DeltaReaderTest extends AnyFunSuite
       .start(path)
     outputDf.awaitTermination(20000)
 
-    eventually(timeout(Span(30, Seconds))) {
+    assertDataFrameNoOrderEquals(expectedDf, DeltaReader(path)
+      .read(sqlCtx.sparkSession, EngineMode.Batch))
+
+  }
+
+  test("Read table with historical and checkpoint") {
+    val sqlCtx = sqlContext
+
+    val expectedData = Seq(
+      Row("A", "a", 2022, 2, 5, "2022-02-05"),
+      Row("B", "b", 2022, 2, 6, "2022-02-06"),
+      Row("C", "c", 2022, 2, 7, "2022-02-07"),
+    )
+    val expectedDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(someSchema)
+    )
+
+    val outputDf = spark.readStream
+      .option("startingTimestamp", "2000-01-01")
+      .delta(delta_source_path)
+      .writeStream
+      .format("delta")
+      .outputMode("append")
+      .option("mergeSchema", "true")
+      .option("checkpointLocation", pathCheckpoint)
+      .trigger(Trigger.ProcessingTime("5 seconds"))
+      .start(path)
+    outputDf.awaitTermination(20000)
+
+    val outputDf3 = DeltaReader(path)
+      .read(sqlCtx.sparkSession, EngineMode.Batch)
+    assertDataFrameNoOrderEquals(expectedDf, outputDf3)
+  }
+
+  test("Read table with historical and no checkpoint") {
+    val sqlCtx = sqlContext
+
+    val directoryCheckpoint = new Directory(new File(pathCheckpoint))
+    directoryCheckpoint.deleteRecursively()
+
+    val expectedData = Seq(
+      Row("A", "a", 2022, 2, 5, "2022-02-05"),
+      Row("A", "a", 2022, 2, 5, "2022-02-05"),
+      Row("B", "b", 2022, 2, 6, "2022-02-06"),
+      Row("B", "b", 2022, 2, 6, "2022-02-06"),
+      Row("C", "c", 2022, 2, 7, "2022-02-07"),
+      Row("C", "c", 2022, 2, 7, "2022-02-07"),
+    )
+    val expectedDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(someSchema)
+    )
+
+    val outputDf = spark.readStream
+       .option("startingTimestamp", "2000-01-01")
+      .delta(delta_source_path)
+      .writeStream
+      .format("delta")
+      .outputMode("append")
+      .option("mergeSchema", "true")
+      .option("checkpointLocation", pathCheckpoint)
+      .trigger(Trigger.ProcessingTime("5 seconds"))
+      .start(path)
+    outputDf.awaitTermination(20000)
+
       val outputDf3 = DeltaReader(path)
         .read(sqlCtx.sparkSession, EngineMode.Batch)
       assertDataFrameNoOrderEquals(expectedDf, outputDf3)
-    }
   }
 }
