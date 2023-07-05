@@ -32,7 +32,7 @@ class DeltaReaderTest extends AnyFunSuite
   val path = "src/test/tmp/delta/letters_6"
   val pathCheckpoint = "src/test/tmp/delta/letters_6_checkpoint"
 
-  val inputData = Seq(
+  val eventA = Seq(
     Row("A", "a", 2022, 2, 5, "2022-02-05")
   )
 
@@ -53,11 +53,12 @@ class DeltaReaderTest extends AnyFunSuite
       .option("mergeSchema", "true")
       .delta(path)
   }
-  test("Create a Delta source for streaming"){
+
+  test("Create Delta source for streaming with event A"){
     val sqlCtx = sqlContext
 
     val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(inputData),
+      spark.sparkContext.parallelize(eventA),
       StructType(someSchema)
     )
 
@@ -65,10 +66,13 @@ class DeltaReaderTest extends AnyFunSuite
     directoryPath.deleteRecursively()
 
     write_into_source(inputDF, delta_source_path, SaveMode.Overwrite)
+    val outputDf = DeltaReader(delta_source_path)
+      .read(sqlCtx.sparkSession, EngineMode.Batch)
+    assertDataFrameNoOrderEquals(inputDF, outputDf)
 
   }
 
-  test("Write event A into sink") {
+  test("Read and Write event A into sink - hist mode") {
     val sqlCtx = sqlContext
 
     val directoryPath = new Directory(new File(path))
@@ -77,13 +81,13 @@ class DeltaReaderTest extends AnyFunSuite
     val directoryCheckpoint = new Directory(new File(pathCheckpoint))
     directoryCheckpoint.deleteRecursively()
 
-    val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(inputData),
+    val eventAdf = spark.createDataFrame(
+      spark.sparkContext.parallelize(eventA),
       StructType(someSchema)
     )
     //Create table
     val emptyRDD = spark.sparkContext.emptyRDD[Row]
-    val emptyDF = spark.createDataFrame(emptyRDD, inputDF.schema)
+    val emptyDF = spark.createDataFrame(emptyRDD, eventAdf.schema)
     emptyDF
       .write
       .format("delta")
@@ -105,21 +109,37 @@ class DeltaReaderTest extends AnyFunSuite
     eventually(timeout(Span(30, Seconds))) {
       val outputDf2 = DeltaReader(path)
         .read(sqlCtx.sparkSession, EngineMode.Batch)
-      assertDataFrameNoOrderEquals(inputDF, outputDf2)
+      assertDataFrameNoOrderEquals(eventAdf, outputDf2)
     }
 
   }
 
-  test("Read event B") {
+  test("Add event B to the source") {
+    val sqlCtx = sqlContext
+
     val eventB = Seq(
       Row("B", "b", 2022, 2, 6, "2022-02-06")
     )
+
+    val sourceData = Seq(
+      Row("A", "a", 2022, 2, 5, "2022-02-05"),
+      Row("B", "b", 2022, 2, 6, "2022-02-06")
+    )
+
     val eventBdf = spark.createDataFrame(
       spark.sparkContext.parallelize(eventB),
       StructType(someSchema)
     )
 
+    val sourceDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(sourceData),
+      StructType(someSchema)
+    )
+
     write_into_source(eventBdf, delta_source_path, SaveMode.Append)
+    val outputDf = DeltaReader(delta_source_path)
+      .read(sqlCtx.sparkSession, EngineMode.Batch)
+    assertDataFrameNoOrderEquals(sourceDf, outputDf)
   }
 
   test("Read and Write event B into sink - without historical") {
@@ -153,16 +173,30 @@ class DeltaReaderTest extends AnyFunSuite
     }
   }
 
-  test("Read event C") {
+  test("Add event C to the source") {
+    val sqlCtx = sqlContext
+
     val eventC = Seq(
+      Row("C", "c", 2022, 2, 7, "2022-02-07")
+    )
+
+    val sourceData = Seq(
+      Row("A", "a", 2022, 2, 5, "2022-02-05"),
+      Row("B", "b", 2022, 2, 6, "2022-02-06"),
       Row("C", "c", 2022, 2, 7, "2022-02-07")
     )
     val eventCdf = spark.createDataFrame(
       spark.sparkContext.parallelize(eventC),
       StructType(someSchema)
     )
-
+    val sourceDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(sourceData),
+      StructType(someSchema)
+    )
     write_into_source(eventCdf, delta_source_path, SaveMode.Append)
+    val outputDf = DeltaReader(delta_source_path)
+      .read(sqlCtx.sparkSession, EngineMode.Batch)
+    assertDataFrameNoOrderEquals(sourceDf, outputDf)
   }
 
   test("Read and Write event C into sink - without historical") {
