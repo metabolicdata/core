@@ -10,7 +10,6 @@ class DeltaReader(val input_identifier: String, historical: Boolean, startTimest
   import io.delta.implicits._
 
   override def readBatch(spark: SparkSession): DataFrame = {
-    print(s"Reading source ${input_identifier} as batch")
 
     spark.read
       .option("timestampAsOf", startTimestamp)
@@ -19,8 +18,6 @@ class DeltaReader(val input_identifier: String, historical: Boolean, startTimest
   }
 
   override def readStream(spark: SparkSession): DataFrame = {
-
-    print(s"Reading source ${input_identifier} as stream" )
 
     val sr = spark.readStream
     val osr = historical match {
