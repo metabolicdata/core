@@ -55,7 +55,6 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
                 .option("mergeSchema", "true")
                 .option("checkpointLocation", checkpointLocation)
                 .start(output_identifier)
-
             }
             case SaveMode.Overwrite => {
               df.writeStream

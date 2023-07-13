@@ -62,14 +62,10 @@ object MetabolicWriter extends Logging {
       }
   }
 
-  def write(df: DataFrame, sink: Sink, historical: Boolean, autoSchema: Boolean, baseCheckpointLocation: String, mode: EngineMode, namespaces: Seq[String])
+  def write(df: DataFrame, sink: Sink, historical: Boolean, autoSchema: Boolean, checkpointPath: String, mode: EngineMode, namespaces: Seq[String])
            (implicit spark: SparkSession, region: Regions) = {
 
     val _df = prepareOutput(sink, df)
-
-    val checkpointPath = baseCheckpointLocation + "/checkpoints/" + sink.name
-      .toLowerCase()
-      .replaceAll("\\W", "_")
 
     sink match {
 

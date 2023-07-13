@@ -5,8 +5,10 @@ import org.apache.spark.sql.functions.{col, schema_of_json}
 import org.apache.spark.sql.streaming.DataStreamReader
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
+import scala.reflect.io.Directory
+import java.io.File
 
-class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, historical: Boolean, startTimestamp: String)
+class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, historical: Boolean, startTimestamp: String, checkpointPath: String)
   extends DataframeUnifiedReader {
 
   override val input_identifier: String = topic
@@ -58,6 +60,10 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
 
   def readStream(spark: SparkSession): DataFrame = {
 
+    if(historical){
+      val directoryPath = new Directory(new File(checkpointPath))
+      directoryPath.deleteRecursively()
+    }
     val plain = spark
       .readStream
       .format("kafka")
@@ -84,7 +90,6 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .format("kafka")
       .option("kafka.bootstrap.servers", servers.mkString(","))
       .option("subscribe", topic)
-      .option("startingTimestamp", startTimestamp)
       .option("startingOffsets", "earliest")
       .option("endingOffsets", "latest")
 
@@ -98,5 +103,5 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
 }
 
 object KafkaReader {
-  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String) = new KafkaReader(servers, apiKey, apiSecret, topic, false)
+  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String) = new KafkaReader(servers, apiKey, apiSecret, topic, false, "", "")
 }

@@ -90,8 +90,12 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
   def transform(mapping: Config)(implicit spark: SparkSession, region: Regions): Unit = {
 
+    val checkpointPath = mapping.environment.baseCheckpointLocation + "/checkpoints/" + mapping.sink.name
+      .toLowerCase()
+      .replaceAll("\\W", "_")
+
     mapping.sources.foreach { source =>
-      MetabolicReader.read(source, mapping.environment.historical, mapping.environment.mode)
+      MetabolicReader.read(source, mapping.environment.historical, mapping.environment.mode, checkpointPath)
     }
 
     mapping.mappings.foreach { mapping =>
@@ -100,8 +104,9 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
     val output: DataFrame = spark.table("output")
 
+
     MetabolicWriter.write(output, mapping.sink, mapping.environment.historical, mapping.environment.autoSchema,
-      mapping.environment.baseCheckpointLocation, mapping.environment.mode, mapping.environment.namespaces)
+      checkpointPath, mapping.environment.mode, mapping.environment.namespaces)
 
   }
 
