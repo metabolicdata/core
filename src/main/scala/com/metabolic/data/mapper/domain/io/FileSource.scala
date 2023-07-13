@@ -8,5 +8,6 @@ case class FileSource(inputPath: String,
                       format: IOFormat = DELTA,
                       useStringPrimitives: Boolean = false,
                       ops: Seq[SourceOp] = Seq.empty,
+                      startTimestamp: String = ""
                       )
   extends Source
