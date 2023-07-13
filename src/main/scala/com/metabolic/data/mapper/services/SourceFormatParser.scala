@@ -30,9 +30,9 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
   private def parseDeltaSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val path = if(config.hasPathOrNull("inputPath")) { config.getString("inputPath")}
     else { config.getString("path") }
-    val startingTime = if(config.hasPathOrNull("startTimestamp")){config.getString("startTimestamp")}
+    val startTimestamp = if(config.hasPathOrNull("startTimestamp")){config.getString("startTimestamp")}
     else{""}
-    FileSource(path, name, IOFormat.DELTA, false, ops, startingTime)
+    FileSource(path, name, IOFormat.DELTA, false, ops, startTimestamp)
   }
 
   private def parseJsonSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
@@ -74,10 +74,15 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val servers = kafkaConfig.servers.get
     val apiKey = kafkaConfig.key.get
     val apiSecret = kafkaConfig.secret.get
-
+    val startTimestamp = if (config.hasPathOrNull("startTimestamp")) {
+      config.getString("startTimestamp")
+    }
+    else {
+      ""
+    }
     val topic = config.getString("topic")
 
-    StreamSource(name, servers, apiKey, apiSecret, topic, IOFormat.KAFKA, ops)
+    StreamSource(name, servers, apiKey, apiSecret, topic, IOFormat.KAFKA, ops, startTimestamp)
   }
 
   private def parseMetastoreSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {

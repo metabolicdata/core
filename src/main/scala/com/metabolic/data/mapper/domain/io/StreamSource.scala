@@ -9,5 +9,6 @@ case class StreamSource(name: String,
                         secret: String,
                         topic: String,
                         format: IOFormat = KAFKA,
-                        ops: Seq[SourceOp] = Seq.empty)
+                        ops: Seq[SourceOp] = Seq.empty,
+                        startTimestamp: String)
   extends Source
