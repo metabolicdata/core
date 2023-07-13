@@ -7,6 +7,7 @@ import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SourceOp
 import com.typesafe.config.{Config => HoconConfig}
 import org.apache.logging.log4j.scala.Logging
+import java.time.{LocalDateTime, ZoneOffset}
 
 
 case class SourceFormatParser()(implicit val region: Regions) extends FormatParser with Logging {
@@ -80,9 +81,10 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     else {
       ""
     }
+    val dateTime = LocalDateTime.parse(startTimestamp)
     val topic = config.getString("topic")
 
-    StreamSource(name, servers, apiKey, apiSecret, topic, IOFormat.KAFKA, ops, startTimestamp)
+    StreamSource(name, servers, apiKey, apiSecret, topic, IOFormat.KAFKA, ops, dateTime.toEpochSecond(ZoneOffset.UTC).toString)
   }
 
   private def parseMetastoreSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
