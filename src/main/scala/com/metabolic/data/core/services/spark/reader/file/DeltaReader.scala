@@ -38,8 +38,8 @@ class DeltaReader(val input_identifier: String, historical: Boolean, startTimest
 
 object DeltaReader {
   def apply(input_identifier: String) = new DeltaReader(input_identifier, false, "", "")
-  def apply(input_identifier: String, historical: Boolean) = new DeltaReader(input_identifier, historical, "", "")
-  def apply(input_identifier: String, startTimestamp: String) = new DeltaReader(input_identifier, false, "", "")
+  //def apply(input_identifier: String, historical: Boolean) = new DeltaReader(input_identifier, historical, "", "")
+  //def apply(input_identifier: String, startTimestamp: String) = new DeltaReader(input_identifier, false, startTimestamp, "")
 
 
 }
