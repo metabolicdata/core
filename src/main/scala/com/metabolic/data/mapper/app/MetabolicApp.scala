@@ -37,6 +37,8 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
       .getOrCreate()
 
+    spark.sparkContext.setLogLevel("ERROR")
+
     params.get("configJar") match {
       case Some(configJar) => loadUDFs(configJar)
       case None =>
