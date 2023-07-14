@@ -12,8 +12,19 @@ class DeltaReader(val input_identifier: String, historical: Boolean, startTimest
 
   override def readBatch(spark: SparkSession): DataFrame = {
 
-    spark.read
-      .option("timestampAsOf", startTimestamp)
+    val sr = spark.read
+    val osr = historical match {
+      case true => {
+        val directoryPath = new Directory(new File(checkpointPath))
+        directoryPath.deleteRecursively()
+        sr
+      }
+      case false => startTimestamp match {
+        case "" => sr
+        case _ => sr.option("timestampAsOf", startTimestamp)
+      }
+    }
+    osr
       .delta(input_identifier)
 
   }
@@ -27,7 +38,9 @@ class DeltaReader(val input_identifier: String, historical: Boolean, startTimest
         directoryPath.deleteRecursively()
         sr.option("startingTimestamp", "2000-01-01")
       }
-      case false  => sr.option("startingTimestamp", startTimestamp)
+      case false  => startTimestamp match {
+        case "" => sr
+        case _ => sr.option("startingTimestamp", startTimestamp)}
     }
 
     osr
@@ -38,8 +51,8 @@ class DeltaReader(val input_identifier: String, historical: Boolean, startTimest
 
 object DeltaReader {
   def apply(input_identifier: String) = new DeltaReader(input_identifier, false, "", "")
-  //def apply(input_identifier: String, historical: Boolean) = new DeltaReader(input_identifier, historical, "", "")
-  //def apply(input_identifier: String, startTimestamp: String) = new DeltaReader(input_identifier, false, startTimestamp, "")
+  def apply(input_identifier: String, historical: Boolean, checkpointPath: String) = new DeltaReader(input_identifier, historical, "", checkpointPath)
+  def apply(input_identifier: String, startTimestamp: String) = new DeltaReader(input_identifier, false, startTimestamp, "")
 
 
 }
