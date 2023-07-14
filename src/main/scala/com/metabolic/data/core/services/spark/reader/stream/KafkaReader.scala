@@ -66,14 +66,25 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
     }
     val plain = spark
       .readStream
+
+    startTimestamp match {
+      case "" => plain
       .format("kafka")
       .option("kafka.bootstrap.servers", servers.mkString(","))
       .option("subscribe", topic)
       .option("kafka.session.timeout.ms", 45000)
       .option("kafka.client.dns.lookup","use_all_dns_ips")
-      .option("startingTimestamp", startTimestamp)
       .option("startingOffsets", if (historical) "earliest" else "latest")
       .option("failOnDataLoss", false)
+      case _ => plain
+        .format("kafka")
+        .option("kafka.bootstrap.servers", servers.mkString(","))
+        .option("subscribe", topic)
+        .option("kafka.session.timeout.ms", 45000)
+        .option("kafka.client.dns.lookup", "use_all_dns_ips")
+        .option("startingTimestamp", startTimestamp)
+        .option("failOnDataLoss", false)
+    }
 
 
     val input = setStreamAuthentication(plain)
@@ -104,4 +115,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
 
 object KafkaReader {
   def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String) = new KafkaReader(servers, apiKey, apiSecret, topic, false, "", "")
+  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String, historical:Boolean, checkpointPath:String) = new KafkaReader(servers, apiKey, apiSecret, topic, historical, "", checkpointPath)
+  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String, startTimestamp: String) = new KafkaReader(servers, apiKey, apiSecret, topic, false, startTimestamp, "")
+
 }
