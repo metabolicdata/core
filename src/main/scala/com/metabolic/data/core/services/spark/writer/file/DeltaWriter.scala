@@ -55,7 +55,6 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
                 .option("mergeSchema", "true")
                 .option("checkpointLocation", checkpointLocation)
                 .start(output_identifier)
-
             }
             case SaveMode.Overwrite => {
               df.writeStream
@@ -99,28 +98,10 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
 
   override def preHook(df: DataFrame): DataFrame = {
 
-    val tableName: String = ConfigUtilsService.getTablePrefix(namespaces, output_identifier)+ConfigUtilsService.getTableNameFileSink(output_identifier)
-
+    val prefix = ConfigUtilsService.getTablePrefix(namespaces, output_identifier)
+    val tableName: String = prefix + ConfigUtilsService.getTableNameFileSink(output_identifier)
     if (!DeltaTable.isDeltaTable(outputPath)) {
       if (!File(outputPath).exists) {
-        //In this way a table is created which can be read but the schema is not visible.
-        /*
-        //Check if the database has location
-        new GlueCatalogService()
-          .checkDatabase(dbName, ConfigUtilsService.getDataBaseName(outputPath))
-        //Create the delta table
-        val deltaTable = DeltaTable.createIfNotExists()
-          .tableName(dbName + "." + tableName)
-          .location(output_identifier)
-          .addColumns(df.schema)
-          .partitionedBy(partitionColumnNames: _*)
-          .execute()
-        deltaTable.toDF.write.format("delta").mode(SaveMode.Append).save(output_identifier)
-        //Create table in Athena (to see the columns)
-        new AthenaCatalogueService()
-          .createDeltaTable(dbName, tableName, output_identifier, true)*/
-
-        //Redo if the other way works for us
         // create an empty RDD with original schema
         val emptyRDD = spark.sparkContext.emptyRDD[Row]
         val emptyDF = spark.createDataFrame(emptyRDD, df.schema)
@@ -132,6 +113,9 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
         //Create table in Athena
         new AthenaCatalogueService()
           .createDeltaTable(dbName, tableName, output_identifier)
+        //Create table in Athena separate schema
+        new AthenaCatalogueService()
+          .createDeltaTable(dbName + "_" + prefix.dropRight(1), tableName, output_identifier)
 
       } else {
         //Convert to delta if parquet
@@ -145,6 +129,8 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
   override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
     //Not for current version
     //deltaTable.optimize().executeCompaction()
+    //deltaTable.optimize().executeZOrderBy("column")
+
     query.flatMap(stream => Option.apply(stream.awaitTermination()))
     true
   }

@@ -2,6 +2,7 @@ package com.metabolic.data.core.services.spark.writer
 
 import com.metabolic.data.mapper.domain.io.EngineMode
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
+import io.delta.tables.DeltaTable
 import org.apache.logging.log4j.scala.Logging
 import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.{DataFrame, SaveMode}
@@ -21,8 +22,14 @@ trait DataframeUnifiedWriter extends Logging {
 
   def postHook(df: DataFrame, streamingQuery: Option[StreamingQuery] ): Boolean = {
 
+//    if (DeltaTable.isDeltaTable(output_identifier)){
+//      val deltaTable = DeltaTable.forPath(output_identifier)
+//
+//      logger.info("optimize with z order")
+//      deltaTable.optimize().executeZOrderBy("column")
+//
+//    }
     streamingQuery.flatMap(stream => Option.apply(stream.awaitTermination()))
-
     true
 
   }

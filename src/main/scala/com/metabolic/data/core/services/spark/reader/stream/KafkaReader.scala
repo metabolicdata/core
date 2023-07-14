@@ -5,8 +5,10 @@ import org.apache.spark.sql.functions.{col, schema_of_json}
 import org.apache.spark.sql.streaming.DataStreamReader
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
+import scala.reflect.io.Directory
+import java.io.File
 
-class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String)
+class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, historical: Boolean, startTimestamp: String, checkpointPath: String)
   extends DataframeUnifiedReader {
 
   override val input_identifier: String = topic
@@ -58,15 +60,31 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
 
   def readStream(spark: SparkSession): DataFrame = {
 
+    if(historical){
+      val directoryPath = new Directory(new File(checkpointPath))
+      directoryPath.deleteRecursively()
+    }
     val plain = spark
       .readStream
+
+    startTimestamp match {
+      case "" => plain
       .format("kafka")
       .option("kafka.bootstrap.servers", servers.mkString(","))
       .option("subscribe", topic)
       .option("kafka.session.timeout.ms", 45000)
       .option("kafka.client.dns.lookup","use_all_dns_ips")
-      .option("startingOffsets", "latest")
+      .option("startingOffsets", if (historical) "earliest" else "latest")
       .option("failOnDataLoss", false)
+      case _ => plain
+        .format("kafka")
+        .option("kafka.bootstrap.servers", servers.mkString(","))
+        .option("subscribe", topic)
+        .option("kafka.session.timeout.ms", 45000)
+        .option("kafka.client.dns.lookup", "use_all_dns_ips")
+        .option("startingTimestamp", startTimestamp)
+        .option("failOnDataLoss", false)
+    }
 
 
     val input = setStreamAuthentication(plain)
@@ -96,5 +114,8 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
 }
 
 object KafkaReader {
-  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String) = new KafkaReader(servers, apiKey, apiSecret, topic)
+  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String) = new KafkaReader(servers, apiKey, apiSecret, topic, false, "", "")
+  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String, historical:Boolean, checkpointPath:String) = new KafkaReader(servers, apiKey, apiSecret, topic, historical, "", checkpointPath)
+  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String, startTimestamp: String) = new KafkaReader(servers, apiKey, apiSecret, topic, false, startTimestamp, "")
+
 }

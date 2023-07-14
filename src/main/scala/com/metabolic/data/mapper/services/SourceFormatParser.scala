@@ -7,6 +7,7 @@ import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SourceOp
 import com.typesafe.config.{Config => HoconConfig}
 import org.apache.logging.log4j.scala.Logging
+import java.time.{LocalDateTime, ZoneOffset}
 
 
 case class SourceFormatParser()(implicit val region: Regions) extends FormatParser with Logging {
@@ -30,8 +31,9 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
   private def parseDeltaSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val path = if(config.hasPathOrNull("inputPath")) { config.getString("inputPath")}
     else { config.getString("path") }
-    
-    FileSource(path, name, IOFormat.DELTA, false, ops)
+    val startTimestamp = if(config.hasPathOrNull("startTimestamp")){config.getString("startTimestamp")}
+    else{""}
+    FileSource(path, name, IOFormat.DELTA, false, ops, startTimestamp)
   }
 
   private def parseJsonSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
@@ -41,7 +43,7 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val useStringPrimitives = if(config.hasPathOrNull("useStringPrimitives")) { config.getBoolean("useStringPrimitives")}
     else { false }
 
-    FileSource(path, name, IOFormat.JSON, useStringPrimitives, ops)
+    FileSource(path, name, IOFormat.JSON, useStringPrimitives, ops, "")
   }
 
   private def parseCSVSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
@@ -51,14 +53,14 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val useStringPrimitives = if(config.hasPathOrNull("useStringPrimitives")) { config.getBoolean("useStringPrimitives")}
     else { false }
 
-    FileSource(path, name, IOFormat.CSV, useStringPrimitives, ops)
+    FileSource(path, name, IOFormat.CSV, useStringPrimitives, ops, "")
   }
 
   private def parseParquetSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val path = if(config.hasPathOrNull("inputPath")) { config.getString("inputPath")}
     else { config.getString("path") }
     
-    FileSource(path, name, IOFormat.PARQUET, false, ops)
+    FileSource(path, name, IOFormat.PARQUET, false, ops, "")
   }
 
   private def parseKafkaSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
@@ -73,10 +75,16 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val servers = kafkaConfig.servers.get
     val apiKey = kafkaConfig.key.get
     val apiSecret = kafkaConfig.secret.get
-
+    val startTimestamp = if (config.hasPathOrNull("startTimestamp")) {
+      config.getString("startTimestamp")
+    }
+    else {
+      ""
+    }
+    val dateTime = LocalDateTime.parse(startTimestamp)
     val topic = config.getString("topic")
 
-    StreamSource(name, servers, apiKey, apiSecret, topic, IOFormat.KAFKA, ops)
+    StreamSource(name, servers, apiKey, apiSecret, topic, IOFormat.KAFKA, ops, dateTime.toEpochSecond(ZoneOffset.UTC).toString)
   }
 
   private def parseMetastoreSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
