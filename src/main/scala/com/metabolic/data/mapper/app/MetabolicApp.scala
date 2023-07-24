@@ -137,14 +137,14 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
         case IOFormat.DELTA => new AthenaCatalogueService().createDeltaTable(options.dbName, prefix+ConfigUtilsService.getTableName(config), s3Path)
         case _ => new GlueCrawlerService().register(options.dbName, options.iamRole, name, Seq(s3Path), prefix)
       }
-
-      if(options.name.contains("production")){
-        val suffix = ConfigUtilsService.getTableSuffix(options.namespaces, s3Path)
-        config.sink.format match {
-          case IOFormat.DELTA => new AthenaCatalogueService().createDeltaTable(options.dbName+suffix, ConfigUtilsService.getTableName(config), s3Path)
-          case _ => new GlueCrawlerService().register(options.dbName+suffix, options.iamRole, name+" "+options.dbName+suffix, Seq(s3Path), "")
-        }
-      }
+//      Schema Separation
+//      if(options.name.contains("production")){
+//        val suffix = ConfigUtilsService.getTableSuffix(options.namespaces, s3Path)
+//        config.sink.format match {
+//          case IOFormat.DELTA => new AthenaCatalogueService().createDeltaTable(options.dbName+suffix, ConfigUtilsService.getTableName(config), s3Path)
+//          case _ => new GlueCrawlerService().register(options.dbName+suffix, options.iamRole, name+" "+options.dbName+suffix, Seq(s3Path), "")
+//        }
+//      }
     }
   }
 
