@@ -15,6 +15,18 @@ class ConfigReaderService(implicit val region: Regions) {
     Map(
       "df.now" -> s"${utcTime.toString(datetimeFormatter)}",
 
+      "df.one_hour_ago" -> s"${utcTime.minusHours(1).toString(datetimeFormatter)}",
+      "df.two_hours_ago" -> s"${utcTime.minusHours(2).toString(datetimeFormatter)}",
+      "df.three_hours_ago" -> s"${utcTime.minusHours(3).toString(datetimeFormatter)}",
+      "df.four_hours_ago" -> s"${utcTime.minusHours(4).toString(datetimeFormatter)}",
+      "df.five_hours_ago" -> s"${utcTime.minusHours(5).toString(datetimeFormatter)}",
+      "df.six_hours_ago" -> s"${utcTime.minusHours(6).toString(datetimeFormatter)}",
+      "df.seven_hours_ago" -> s"${utcTime.minusHours(7).toString(datetimeFormatter)}",
+      "df.eight_hours_ago" -> s"${utcTime.minusHours(8).toString(datetimeFormatter)}",
+      "df.nine_hours_ago" -> s"${utcTime.minusHours(9).toString(datetimeFormatter)}",
+      "df.ten_hours_ago" -> s"${utcTime.minusHours(10).toString(datetimeFormatter)}",
+      "df.eleven_hours_ago" -> s"${utcTime.minusHours(11).toString(datetimeFormatter)}",
+
       "df.today" -> s"${utcTime.toString()}",
       "df.start_of_today" -> s"${utcTime.withMillisOfDay(0).toString(datetimeFormatter)}",
       "df.end_of_today" -> s"${utcTime.withMillisOfDay(0).plusDays(1).plusMillis(-1).toString(datetimeFormatter)}",
