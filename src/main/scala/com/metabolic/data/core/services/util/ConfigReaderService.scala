@@ -72,14 +72,21 @@ class ConfigReaderService(implicit val region: Regions) {
 
   private def prepareConfig(params: Map[String, String]) = {
 
+    val preloadedConfig = preloadConfig()
+
     params
       .filter { kv =>
         kv._1.startsWith("dp.")
       }.map { kv =>
-        System.setProperty(kv._1, kv._2)
+        val value = if (preloadedConfig.contains(kv._2)) {
+          preloadedConfig(kv._2)
+        } else {
+          kv._2
+        }
+        System.setProperty(kv._1, value)
       }
 
-    preloadConfig()
+    preloadedConfig
       .map { kv =>
         System.setProperty(kv._1, kv._2)
       }
