@@ -8,6 +8,8 @@ import com.metabolic.data.mapper.domain.ops.mapping.TupletIntervalMapping
 import com.metabolic.data.mapper.domain.ops.source.{DedupeSourceOp, FilterSourceOp, SQLOrder, SelectExpressionSourceOp}
 import org.scalatest.funsuite.AnyFunSuite
 
+import scala.util.matching.Regex
+
 class ConfigReaderServiceTest extends AnyFunSuite with RegionedTest  {
 
   val personHOCON =
@@ -145,17 +147,40 @@ class ConfigReaderServiceTest extends AnyFunSuite with RegionedTest  {
 
   }
 
+  test("ConfigReaderService resolves a preload ") {
+
+    val overrideConfig = new ConfigReaderService().getConfig("src/test/resources/run_variable.conf")
+    val datePattern: String = """\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"""
+
+    assert(overrideConfig.getString("time").matches(datePattern))
+  }
+
   test("ConfigReaderService resolves a variable in map ") {
 
     val args: Map[String, String] = Map(
       "dp.region" -> "eu-west-4",
-      "dp.raw_bucket" -> "s3://factorial-dl-rawy"
+      "dp.raw_bucket" -> "s3://factorial-dl-rawy",
+      "dp.time" -> "2021-01-01T00:00:00"
     )
 
     val overrideConfig = new ConfigReaderService().getConfig("src/test/resources/run_map.conf", args)
 
     assert(overrideConfig.getString("pathy") == "s3://factorial-dl-rawy/tmp")
 
+  }
+
+  test("ConfigReaderService resolves a preload in a map") {
+
+    val args: Map[String, String] = Map(
+      "dp.region" -> "eu-west-4",
+      "dp.raw_bucket" -> "s3://factorial-dl-rawy",
+      "dp.time" -> "df.now"
+    )
+
+    val overrideConfig = new ConfigReaderService().getConfig("src/test/resources/run_map.conf", args)
+    val datePattern: String = """\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"""
+
+    assert(overrideConfig.getString("time").matches(datePattern))
   }
 
   test("ConfigReaderService resolves mappings ") {
