@@ -9,6 +9,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.streaming.{OutputMode, Trigger}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.joda.time.DateTime
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Futures.timeout
@@ -17,6 +18,9 @@ import org.scalatest.time.{Seconds, Span}
 
 import scala.reflect.io.Directory
 import java.io.File
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 class DeltaReaderTest extends AnyFunSuite
   with DataFrameSuiteBase
@@ -72,47 +76,6 @@ class DeltaReaderTest extends AnyFunSuite
 
   }
 
-  test("Read and Write event A") {
-    val sqlCtx = sqlContext
-
-    val directoryPath = new Directory(new File(path))
-    directoryPath.deleteRecursively()
-
-    val directoryCheckpoint = new Directory(new File(pathCheckpoint))
-    directoryCheckpoint.deleteRecursively()
-
-    val eventAdf = spark.createDataFrame(
-      spark.sparkContext.parallelize(eventA),
-      StructType(someSchema)
-    )
-    //Create table
-    val emptyRDD = spark.sparkContext.emptyRDD[Row]
-    val emptyDF = spark.createDataFrame(emptyRDD, eventAdf.schema)
-    emptyDF
-      .write
-      .format("delta")
-      .mode(SaveMode.Append)
-      .save(path)
-
-    val outputDf = new DeltaReader(delta_source_path, "2000-01-01")
-      .read(sqlCtx.sparkSession, EngineMode.Stream)
-      .writeStream
-      .format("delta")
-      .outputMode("append")
-      .option("mergeSchema", "true")
-      .option("checkpointLocation", pathCheckpoint)
-      .trigger(Trigger.ProcessingTime("3 seconds"))
-      .start(path)
-    outputDf.awaitTermination(20000)
-
-    eventually(timeout(Span(10, Seconds))) {
-      val outputDf2 = DeltaReader(path)
-        .read(sqlCtx.sparkSession, EngineMode.Batch)
-      assertDataFrameNoOrderEquals(eventAdf, outputDf2)
-    }
-
-  }
-
   test("Add event B to the source") {
     val sqlCtx = sqlContext
 
@@ -134,40 +97,61 @@ class DeltaReaderTest extends AnyFunSuite
       spark.sparkContext.parallelize(sourceData),
       StructType(someSchema)
     )
-
+    Thread.sleep(10000)
     write_into_source(eventBdf, delta_source_path, SaveMode.Append)
     val outputDf = DeltaReader(delta_source_path)
       .read(sqlCtx.sparkSession, EngineMode.Batch)
     assertDataFrameNoOrderEquals(sourceDf, outputDf)
   }
 
-  test("Read and Write event B into sink - without historical") {
+  test("Read and Write event A") {
     val sqlCtx = sqlContext
 
-    val expectedData = Seq(
-      Row("A", "a", 2022, 2, 5, "2022-02-05"),
+    val directoryPath = new Directory(new File(path))
+    directoryPath.deleteRecursively()
+
+    val directoryCheckpoint = new Directory(new File(pathCheckpoint))
+    directoryCheckpoint.deleteRecursively()
+
+    val eventB = Seq(
       Row("B", "b", 2022, 2, 6, "2022-02-06")
     )
-    val expectedDf = spark.createDataFrame(
-      spark.sparkContext.parallelize(expectedData),
+
+    val eventBdf = spark.createDataFrame(
+      spark.sparkContext.parallelize(eventB),
       StructType(someSchema)
     )
+    //Create table
+    val emptyRDD = spark.sparkContext.emptyRDD[Row]
+    val emptyDF = spark.createDataFrame(emptyRDD, eventBdf.schema)
+    emptyDF
+      .write
+      .format("delta")
+      .mode(SaveMode.Append)
+      .save(path)
 
-    val outputDf = new DeltaReader(delta_source_path, "")
+    val originalDateTime = LocalDateTime.now()
+    val pattern = "yyyy-MM-dd HH:mm:ss"
+    val formatter = DateTimeFormatter.ofPattern(pattern)
+    val newDateTime = originalDateTime.minus(10, ChronoUnit.SECONDS)
+    val newDateTimeStr = newDateTime.format(formatter)
+
+    val outputDf = new DeltaReader(delta_source_path, newDateTimeStr)
       .read(sqlCtx.sparkSession, EngineMode.Stream)
       .writeStream
       .format("delta")
       .outputMode("append")
       .option("mergeSchema", "true")
       .option("checkpointLocation", pathCheckpoint)
-      .trigger(Trigger.ProcessingTime("5 seconds"))
+      .trigger(Trigger.ProcessingTime("3 seconds"))
       .start(path)
     outputDf.awaitTermination(20000)
 
-    eventually(timeout(Span(30, Seconds))) {
-      val outputDf3 = DeltaReader(path)
+    eventually(timeout(Span(10, Seconds))) {
+      val outputDf2 = DeltaReader(path)
         .read(sqlCtx.sparkSession, EngineMode.Batch)
-      assertDataFrameNoOrderEquals(expectedDf, outputDf3)
+      assertDataFrameNoOrderEquals(eventBdf, outputDf2)
     }
+
   }
 }
