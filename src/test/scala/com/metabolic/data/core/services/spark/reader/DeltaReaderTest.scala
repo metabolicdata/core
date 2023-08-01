@@ -104,7 +104,7 @@ class DeltaReaderTest extends AnyFunSuite
     assertDataFrameNoOrderEquals(sourceDf, outputDf)
   }
 
-  test("Read and Write event A") {
+  test("Read after event b committed time should not return event A") {
     val sqlCtx = sqlContext
 
     val directoryPath = new Directory(new File(path))
