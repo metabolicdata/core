@@ -107,15 +107,16 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
   }
 
-  def after(mapping: Config)(implicit region: Regions) = {
+  def after(mapping: Config)(implicit spark: SparkSession, region: Regions) = {
+
     logger.info(s"Done with ${mapping.name}, registering in Glue Catalog")
     register(mapping)
 
     if (mapping.sink.isInstanceOf[FileSink]) {
       logger.info(s"Done with ${mapping.name}, pushing lineage to Atlan")
       mapping.environment.atlanToken match {
-        case Some(token) => new AtlanService(token)
-          .setLineage(mapping)
+        case Some(token) => new AtlanService(token, spark)
+          .setLineage(mapping, true, true)
         case _ => ""
       }
     } else {
