@@ -28,7 +28,8 @@ libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk-glue" % awsVersion % Provided,
   "com.amazonaws" % "aws-java-sdk-kinesis" % awsVersion % Provided,
   "com.amazonaws" % "aws-java-sdk-athena" % awsVersion % Provided,
-  "org.scalaj" %% "scalaj-http" % "2.3.0",
+  "org.scalaj" %% "scalaj-http" % "2.4.2",
+  "com.typesafe.play" %% "play-json" % "2.9.4",
   "io.starburst.openx.data" % "json-serde" % "1.3.9-e.10"
 )
 
