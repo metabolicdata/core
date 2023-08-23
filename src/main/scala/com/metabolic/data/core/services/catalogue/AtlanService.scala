@@ -57,34 +57,32 @@ class AtlanService(token: String) extends Logging {
     val outputTable = getOutputTableName(mapping)
     val dbName = mapping.environment.dbName
     val qualifiedName = s"${baseUrl}${dbName}/${outputTable}"
+    val body = generateDescriptionBodyJson(mapping, outputTable, qualifiedName)
+    logger.info(s"Atlan Description Json Body ${body}")
+    HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/bulk#changeDescriptione", body, token)
+  }
+
+  def generateDescriptionBodyJson(mapping: Config, outputTable: String, qualifiedName: String): String = {
     val sql = mapping.mappings.head match {
       case sqlmapping: SQLMapping => {
         sqlmapping.sqlContents
       }
       case _ => ""
     }
-    sql match {
-      case "" => ""
-      case _ => {
-        val body =
-          s"""
-             {
-             |  "entities": [
-             |    {
-             |      "typeName": "Table",
-             |      "attributes": {
-             |        "name": "$outputTable",
-             |        "qualifiedName": "$qualifiedName",
-             |        "description": "$sql"
-             |      }
-             |    }
-             |  ]
-             |}
-             |""".stripMargin
-        logger.info(s"Atlan Description Json Body ${body}")
-        HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/bulk#changeDescriptione", body, token)
-      }
-    }
+    s"""
+        |{
+        |  "entities": [
+        |    {
+        |      "typeName": "Table",
+        |      "attributes": {
+        |        "name": "$outputTable",
+        |        "qualifiedName": "$qualifiedName",
+        |        "description": "$sql"
+        |      }
+        |    }
+        |  ]
+        |}
+        |""".stripMargin
   }
 
   def generateBodyJson(mapping: Config): String = {

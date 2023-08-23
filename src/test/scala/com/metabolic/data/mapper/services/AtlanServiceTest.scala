@@ -106,4 +106,40 @@ class AtlanServiceTest extends AnyFunSuite
     print(calculatedJson)
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }
+
+  test("Test fake asset GUI - should not stop execution") {
+    val response = new AtlanService("foo")
+      .getGUI("test")
+    assert(response.trim.equalsIgnoreCase(""))
+  }
+
+  test("Test description body") {
+    val testingConfig = Config(
+      "",
+      List(io.FileSource("raw/stripe/fake_employee/version=3/", "employees", IOFormat.PARQUET), io.FileSource("clean/fake_employee_s/version=123/", "employeesss", IOFormat.PARQUET), io.FileSource("raw/hubspot/owners/", "owners", IOFormat.PARQUET), io.FileSource("clean/hubspot_owners/", "clean_owners", IOFormat.PARQUET)),
+      List(new SQLFileMapping("src/test/resources/simple.sql", region)),
+      io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", SaveMode.Overwrite, IOFormat.PARQUET),
+      Defaults(ConfigFactory.load()),
+      Environment("", EngineMode.Batch, "", false, "test", "", Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+    )
+    val calculatedJson = new AtlanService("foo")
+      .generateDescriptionBodyJson(testingConfig, "gold_stripe_f_fake_employee_t", "foo/test/gold_stripe_f_fake_employee_t")
+
+    val expectedJson =
+      """
+        |{
+        |  "entities": [
+        |    {
+        |      "typeName": "Table",
+        |      "attributes": {
+        |        "name": "gold_stripe_f_fake_employee_t",
+        |        "qualifiedName": "foo/test/gold_stripe_f_fake_employee_t",
+        |        "description": "select * from employees where age < 40"
+        |      }
+        |    }
+        |  ]
+        |}
+        |""".stripMargin
+    assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
+  }
 }
