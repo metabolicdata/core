@@ -49,7 +49,7 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", SaveMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
 
     val expectedJson =
@@ -101,14 +101,14 @@ class AtlanServiceTest extends AnyFunSuite
         |  ]
         |}""".stripMargin
 
-    val calculatedJson = new AtlanService("foo")
+    val calculatedJson = new AtlanService("foo", "foo")
       .generateBodyJson(testingConfig)
     print(calculatedJson)
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }
 
   test("Test fake asset GUI - should not stop execution") {
-    val response = new AtlanService("foo")
+    val response = new AtlanService("foo", "foo")
       .getGUI("test")
     assert(response.trim.equalsIgnoreCase(""))
   }
@@ -120,9 +120,9 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", SaveMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", Option(""),Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
-    val calculatedJson = new AtlanService("foo")
+    val calculatedJson = new AtlanService("foo", "foo")
       .generateDescriptionBodyJson(testingConfig, "gold_stripe_f_fake_employee_t", "foo/test/gold_stripe_f_fake_employee_t")
 
     val expectedJson =

@@ -17,10 +17,9 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 
-class AtlanService(token: String) extends Logging {
+class AtlanService(token: String, baseUrl: String) extends Logging {
 
   val versionRegex = """version=(\d)+/""".r
-  private val baseUrl = "default/athena/1659962653/AwsDataCatalog/"
 
   def setLineage(mapping: Config): String = {
     val body = generateBodyJson(mapping)

@@ -62,6 +62,12 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       Option.empty
     }
 
+    val atlanBaseUrl = if (config.hasPathOrNull("atlan_url")) {
+      Option.apply(config.getString("atlan_url"))
+    } else {
+      Option.empty
+    }
+
     val autoSchema = if (config.hasPathOrNull("autoSchema")){
       config.getBoolean("autoSchema")
     } else {
@@ -80,7 +86,7 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       Seq.empty
     }
 
-    Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, atlanToken, historical, autoSchema, namespaces, infix_namespaces)
+    Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, atlanToken, atlanBaseUrl,historical, autoSchema, namespaces, infix_namespaces)
   }
 
   private def parseDefaults(config: HoconConfig) = {

@@ -115,7 +115,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       logger.info(s"Done with ${mapping.name}, pushing lineage to Atlan")
       mapping.environment.atlanToken match {
         case Some(token) => {
-          val atlan = new AtlanService(token)
+          val atlan = new AtlanService(token, mapping.environment.atlanBaseUrl.get)
           atlan.setLineage(mapping)
           atlan.setMetadata(mapping)
           atlan.setDescription(mapping)
