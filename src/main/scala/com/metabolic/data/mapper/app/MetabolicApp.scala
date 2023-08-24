@@ -114,8 +114,12 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
     if (mapping.sink.isInstanceOf[FileSink]) {
       logger.info(s"Done with ${mapping.name}, pushing lineage to Atlan")
       mapping.environment.atlanToken match {
-        case Some(token) => new AtlanService(token)
-          .setLineage(mapping)
+        case Some(token) => {
+          val atlan = new AtlanService(token, mapping.environment.atlanBaseUrl.getOrElse(""))
+          atlan.setLineage(mapping)
+          atlan.setMetadata(mapping)
+          atlan.setDescription(mapping)
+        }
         case _ => ""
       }
     } else {

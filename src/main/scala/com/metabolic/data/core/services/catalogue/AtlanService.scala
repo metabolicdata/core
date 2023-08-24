@@ -2,14 +2,22 @@ package com.metabolic.data.core.services.catalogue
 
 import com.metabolic.data.core.services.util.ConfigUtilsService
 import com.metabolic.data.mapper.domain.Config
+import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
+import com.metabolic.data.mapper.domain.ops.SQLMapping
+import org.apache.hadoop.shaded.com.google.gson.JsonParseException
 import org.apache.logging.log4j.scala.Logging
 
 import java.math.BigInteger
 import java.security.MessageDigest
 import scala.collection.mutable
+import play.api.libs.json._
 
-class AtlanService(token: String) extends Logging {
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+
+class AtlanService(token: String, baseUrl: String) extends Logging {
 
   val versionRegex = """version=(\d)+/""".r
 
@@ -19,10 +27,66 @@ class AtlanService(token: String) extends Logging {
     HttpRequestHandler.sendHttpPostRequest("https://factorial.atlan.com/api/meta/entity/bulk#createProcesses", body, token)
   }
 
+  def setMetadata(mapping: Config): String = {
+    val outputTable = getOutputTableName(mapping)
+    val dbName = mapping.environment.dbName
+    val qualifiedName = s"${baseUrl}${dbName}/${outputTable}"
+    val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
+    guid match{
+      case "" => ""
+      case _ => {
+        val last_synced = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+        val mode = mapping.environment.mode
+        val body =
+          s"""
+             |{
+             |  "Data Quality": {
+             |    "last_synced_at" : "${last_synced}",
+             |    "engine_type":"${mode.toString}"
+             |  }
+             |}
+             |""".stripMargin
+        logger.info(s"Atlan Metadata Json Body ${body}")
+        HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/guid/$guid/businessmetadata/displayName?isOverwrite=false", body, token)
+      }
+    }
+  }
+
+  def setDescription(mapping: Config): String = {
+    val outputTable = getOutputTableName(mapping)
+    val dbName = mapping.environment.dbName
+    val qualifiedName = s"${baseUrl}${dbName}/${outputTable}"
+    val body = generateDescriptionBodyJson(mapping, outputTable, qualifiedName)
+    logger.info(s"Atlan Description Json Body ${body}")
+    HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/bulk#changeDescriptione", body, token)
+  }
+
+  def generateDescriptionBodyJson(mapping: Config, outputTable: String, qualifiedName: String): String = {
+    val sql = mapping.mappings.head match {
+      case sqlmapping: SQLMapping => {
+        sqlmapping.sqlContents
+      }
+      case _ => ""
+    }
+    s"""
+        |{
+        |  "entities": [
+        |    {
+        |      "typeName": "Table",
+        |      "attributes": {
+        |        "name": "$outputTable",
+        |        "qualifiedName": "$qualifiedName",
+        |        "description": "$sql"
+        |      }
+        |    }
+        |  ]
+        |}
+        |""".stripMargin
+  }
+
   def generateBodyJson(mapping: Config): String = {
     val inputTables = getSourceTableNameList(mapping)
     val outputTable = getOutputTableName(mapping)
-    val baseUrl = "default/athena/1659962653/AwsDataCatalog/"
     val dbName = mapping.environment.dbName
     val name = inputTables.mkString(",") + " -> " + s"${dbName}/${outputTable}"
     val qualifiedName = baseUrl + md5Hash(name)
@@ -117,6 +181,37 @@ class AtlanService(token: String) extends Logging {
     ConfigUtilsService.getTablePrefix(mapping.environment.namespaces, s3Path) +
       ConfigUtilsService.getTableInfix(mapping.environment.infix_namespaces, s3Path) +
       ConfigUtilsService.getTableName(mapping)
+  }
+
+  def getGUI(qualifiedName: String): String = {
+    try {
+      val response = HttpRequestHandler.sendHttpGetRequest(s"https://factorial.atlan.com/api/meta/entity/uniqueAttribute/type/Table?attr:qualifiedName=${qualifiedName}", token)
+      isValidJson(response) match {
+        case true => {
+          val json = Json.parse(response)
+          json.\("entity").get("guid").toString()
+        }
+        case false => {
+          logger.info(s"can not find obj ${qualifiedName}")
+          ""
+        }
+      }
+    }
+  catch
+  {
+    case e: Exception =>
+      println(s"An error occurred: ${e.getMessage}")
+      ""
+  }
+  }
+
+  private def isValidJson(jsonString: String): Boolean = {
+    try {
+      Json.parse(jsonString)
+      true
+    } catch {
+      case _: JsonParseException => false
+    }
   }
 
 }

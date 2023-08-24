@@ -49,7 +49,7 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", SaveMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
 
     val expectedJson =
@@ -59,17 +59,17 @@ class AtlanServiceTest extends AnyFunSuite
         |      "typeName": "Process",
         |      "attributes": {
         |        "name": "test/raw_stripe_fake_employee,test/clean_fake_employee_s,test/raw_hubspot_owners,test/clean_hubspot_owners -> test/gold_stripe_f_fake_employee_t",
-        |        "qualifiedName": "default/athena/1659962653/AwsDataCatalog/47b83f3425f72bfe7cbf3d966f9bda4b",
+        |        "qualifiedName": "foo47b83f3425f72bfe7cbf3d966f9bda4b",
         |        "connectorName": "athena",
         |        "connectionName": "athena",
-        |        "connectionQualifiedName": "default/athena/1659962653/AwsDataCatalog"
+        |        "connectionQualifiedName": "fo"
         |      },
         |      "relationshipAttributes": {
         |      "outputs": [
         |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/gold_stripe_f_fake_employee_t"
+        |              "qualifiedName": "footest/gold_stripe_f_fake_employee_t"
         |            }
         |          }
         |        ],
@@ -77,22 +77,22 @@ class AtlanServiceTest extends AnyFunSuite
         |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/raw_stripe_fake_employee"
+        |              "qualifiedName": "footest/raw_stripe_fake_employee"
         |            }
         |          },          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/clean_fake_employee_s"
+        |              "qualifiedName": "footest/clean_fake_employee_s"
         |            }
         |          },          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/raw_hubspot_owners"
+        |              "qualifiedName": "footest/raw_hubspot_owners"
         |            }
         |          },          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/clean_hubspot_owners"
+        |              "qualifiedName": "footest/clean_hubspot_owners"
         |            }
         |          }
         |        ]
@@ -101,9 +101,45 @@ class AtlanServiceTest extends AnyFunSuite
         |  ]
         |}""".stripMargin
 
-    val calculatedJson = new AtlanService("foo")
+    val calculatedJson = new AtlanService("foo", "foo")
       .generateBodyJson(testingConfig)
     print(calculatedJson)
+    assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
+  }
+
+  test("Test fake asset GUI - should not stop execution") {
+    val response = new AtlanService("foo", "foo")
+      .getGUI("test")
+    assert(response.trim.equalsIgnoreCase(""))
+  }
+
+  test("Test description body") {
+    val testingConfig = Config(
+      "",
+      List(io.FileSource("raw/stripe/fake_employee/version=3/", "employees", IOFormat.PARQUET), io.FileSource("clean/fake_employee_s/version=123/", "employeesss", IOFormat.PARQUET), io.FileSource("raw/hubspot/owners/", "owners", IOFormat.PARQUET), io.FileSource("clean/hubspot_owners/", "clean_owners", IOFormat.PARQUET)),
+      List(new SQLFileMapping("src/test/resources/simple.sql", region)),
+      io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", SaveMode.Overwrite, IOFormat.PARQUET),
+      Defaults(ConfigFactory.load()),
+      Environment("", EngineMode.Batch, "", false, "test", "", Option(""),Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+    )
+    val calculatedJson = new AtlanService("foo", "foo")
+      .generateDescriptionBodyJson(testingConfig, "gold_stripe_f_fake_employee_t", "foo/test/gold_stripe_f_fake_employee_t")
+
+    val expectedJson =
+      """
+        |{
+        |  "entities": [
+        |    {
+        |      "typeName": "Table",
+        |      "attributes": {
+        |        "name": "gold_stripe_f_fake_employee_t",
+        |        "qualifiedName": "foo/test/gold_stripe_f_fake_employee_t",
+        |        "description": "select * from employees where age < 40"
+        |      }
+        |    }
+        |  ]
+        |}
+        |""".stripMargin
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }
 }
