@@ -59,17 +59,17 @@ class AtlanServiceTest extends AnyFunSuite
         |      "typeName": "Process",
         |      "attributes": {
         |        "name": "test/raw_stripe_fake_employee,test/clean_fake_employee_s,test/raw_hubspot_owners,test/clean_hubspot_owners -> test/gold_stripe_f_fake_employee_t",
-        |        "qualifiedName": "default/athena/1659962653/AwsDataCatalog/47b83f3425f72bfe7cbf3d966f9bda4b",
+        |        "qualifiedName": "foo47b83f3425f72bfe7cbf3d966f9bda4b",
         |        "connectorName": "athena",
         |        "connectionName": "athena",
-        |        "connectionQualifiedName": "default/athena/1659962653/AwsDataCatalog"
+        |        "connectionQualifiedName": "fo"
         |      },
         |      "relationshipAttributes": {
         |      "outputs": [
         |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/gold_stripe_f_fake_employee_t"
+        |              "qualifiedName": "footest/gold_stripe_f_fake_employee_t"
         |            }
         |          }
         |        ],
@@ -77,22 +77,22 @@ class AtlanServiceTest extends AnyFunSuite
         |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/raw_stripe_fake_employee"
+        |              "qualifiedName": "footest/raw_stripe_fake_employee"
         |            }
         |          },          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/clean_fake_employee_s"
+        |              "qualifiedName": "footest/clean_fake_employee_s"
         |            }
         |          },          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/raw_hubspot_owners"
+        |              "qualifiedName": "footest/raw_hubspot_owners"
         |            }
         |          },          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
-        |              "qualifiedName": "default/athena/1659962653/AwsDataCatalog/test/clean_hubspot_owners"
+        |              "qualifiedName": "footest/clean_hubspot_owners"
         |            }
         |          }
         |        ]
