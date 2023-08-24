@@ -388,7 +388,7 @@ class MetabolicAppIT extends AnyFunSuite
       List(SQLStatmentMapping("WITH a as (SELECT * from vowels) SELECT *, make_date(yyyy,mm,dd) as date from a")),
       io.FileSink("test", "src/test/tmp/vowelsv1_o", SaveMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("date"), ops = Seq(ManageSchemaSinkOp())),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false,"dbName","",Option.empty,false, true)
+      Environment("", EngineMode.Batch, "", false,"dbName","",Option.empty, Option.empty,false, true)
 
     )
 
@@ -464,7 +464,7 @@ class MetabolicAppIT extends AnyFunSuite
       List(SQLStatmentMapping("WITH a as (SELECT * from vowels) SELECT *, CAST(make_date(yyyy,mm,dd) as string) as date from a")),
       io.FileSink("test", "src/test/tmp/vowels_o", SaveMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("date")),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "",  false,"dbName","",Option.empty)
+      Environment("", EngineMode.Batch, "",  false,"dbName","",Option.empty, Option.empty)
 
     )
 
