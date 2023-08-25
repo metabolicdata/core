@@ -35,21 +35,33 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
     guid match{
       case "" => ""
       case _ => {
-        val last_synced = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-        val mode = mapping.environment.mode
-        val body =
-          s"""
-             |{
-             |  "Data Quality": {
-             |    "last_synced_at" : "${last_synced}",
-             |    "engine_type":"${mode.toString}"
-             |  }
-             |}
-             |""".stripMargin
+        val body: String = generateMetadaBody(mapping)
         logger.info(s"Atlan Metadata Json Body ${body}")
         HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/guid/$guid/businessmetadata/displayName?isOverwrite=false", body, token)
       }
     }
+  }
+
+  def generateMetadaBody(mapping: Config): String = {
+    val last_synced = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+    val mode = mapping.environment.mode
+    val sql = mapping.mappings.head match {
+      case sqlmapping: SQLMapping => {
+        sqlmapping.sqlContents
+      }
+      case _ => ""
+    }
+    val body =
+      s"""
+         |{
+         |  "Data Quality": {
+         |    "last_synced_at" : "${last_synced}",
+         |    "engine_type":"${mode.toString}",
+         |    "sql_mapping":"$sql"
+         |  }
+         |}
+         |""".stripMargin
+    body
   }
 
   def setDescription(mapping: Config): String = {
@@ -62,12 +74,6 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
   }
 
   def generateDescriptionBodyJson(mapping: Config, outputTable: String, qualifiedName: String): String = {
-    val sql = mapping.mappings.head match {
-      case sqlmapping: SQLMapping => {
-        sqlmapping.sqlContents
-      }
-      case _ => ""
-    }
     s"""
         |{
         |  "entities": [
@@ -76,7 +82,7 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
         |      "attributes": {
         |        "name": "$outputTable",
         |        "qualifiedName": "$qualifiedName",
-        |        "description": "$sql"
+        |        "description": ""
         |      }
         |    }
         |  ]

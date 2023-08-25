@@ -118,7 +118,6 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
           val atlan = new AtlanService(token, mapping.environment.atlanBaseUrl.getOrElse(""))
           atlan.setLineage(mapping)
           atlan.setMetadata(mapping)
-          atlan.setDescription(mapping)
         }
         case _ => ""
       }
