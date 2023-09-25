@@ -8,6 +8,7 @@ scalaVersion := "2.12.17"
 val sparkVersion = "3.3.0"
 val awsVersion = "1.12.401"
 val testContainersVersion = "0.40.12"
+val confluentVersion = "7.2.3"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
@@ -39,6 +40,12 @@ pomIncludeRepository := { x => false }
 resolvers += "aws-glue-etl-artifacts" at "https://aws-glue-etl-artifacts.s3.amazonaws.com/release/"
 libraryDependencies += "com.amazonaws" % "AWSGlueETL" % "1.0.0" % Provided
 */
+
+resolvers +="confluent" at "https://packages.confluent.io/maven/"
+
+libraryDependencies ++= Seq(
+  "za.co.absa" %% "abris" % "6.3.0"
+)
 
 assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard

@@ -462,7 +462,7 @@ class DeltaWriterTest extends AnyFunSuite
 
 
     //Set job reader + writer
-    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName)
+    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName, "", "", "", Option.empty)
       .read(spark, EngineMode.Stream)
       .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
 
@@ -566,7 +566,7 @@ class DeltaWriterTest extends AnyFunSuite
 
 
     //Set job reader + writer
-    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName)
+    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName, "", "", "", Option.empty)
       .read(spark, EngineMode.Stream)
       .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
 
@@ -690,7 +690,7 @@ class DeltaWriterTest extends AnyFunSuite
 
 
     //Set job reader + writer
-    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName)
+    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName, "", "", "", Option.empty)
       .read(spark, EngineMode.Stream)
       .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
 

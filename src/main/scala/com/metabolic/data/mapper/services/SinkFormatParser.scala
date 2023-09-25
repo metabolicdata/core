@@ -120,6 +120,13 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
     val servers = kafkaConfig.servers.get
     val apiKey = kafkaConfig.key.get
     val apiSecret = kafkaConfig.secret.get
+    val schemaRegistryUrl = kafkaConfig.schemaRegistryUrl.getOrElse("")
+    val srApiKey = kafkaConfig.srKey.getOrElse("")
+    val srApiSecret = kafkaConfig.srSecret.getOrElse("")
+    val schemaRegistry = if (config.hasPath("schemaRegistry")) {
+      Option(config.getString("schemaRegistry").toLowerCase())
+    } else None
+
 
     val topic = config.getString("topic")
 
@@ -129,7 +136,9 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
       Option.empty
     }
 
-    StreamSink(name, servers, apiKey, apiSecret, topic, idColumnName, IOFormat.KAFKA, ops = ops )
+    new KafkaStreamSink(name, servers, apiKey, apiSecret, topic, idColumnName,
+      schemaRegistryUrl, srApiKey, srApiSecret, schemaRegistry,
+      IOFormat.KAFKA, ops = ops)
   }
 
   private def checkSaveMode(config: HoconConfig): SaveMode = {

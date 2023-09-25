@@ -80,7 +80,9 @@ object MetabolicWriter extends Logging {
             logger.info(s"Writing Kafka sink ${streamSink.topic}")
 
             new KafkaWriter(streamSink.servers, streamSink.apiKey, streamSink.apiSecret,
-              streamSink.topic, streamSink.idColumnName, checkpointPath)
+              streamSink.topic, streamSink.idColumnName, checkpointPath,
+              streamSink.asInstanceOf[KafkaStreamSink].schemaRegistryUrl, streamSink.asInstanceOf[KafkaStreamSink].srApiKey,
+              streamSink.asInstanceOf[KafkaStreamSink].srApiSecret, streamSink.asInstanceOf[KafkaStreamSink].schemaRegistry)
               .write(_df, mode)
 
         }
