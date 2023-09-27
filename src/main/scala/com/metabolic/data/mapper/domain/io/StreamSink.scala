@@ -10,6 +10,10 @@ case class StreamSink(name: String,
                       apiSecret: String,
                       topic: String,
                       idColumnName: Option[String],
+                      schemaRegistryUrl: String,
+                      srApiKey: String,
+                      srApiSecret: String,
+                      schemaRegistry: Option[String],
                       format: IOFormat = KAFKA,
                       ops: Seq[SinkOp])
   extends Sink {

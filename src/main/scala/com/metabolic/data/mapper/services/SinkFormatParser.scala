@@ -136,7 +136,7 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
       Option.empty
     }
 
-    new KafkaStreamSink(name, servers, apiKey, apiSecret, topic, idColumnName,
+    StreamSink(name, servers, apiKey, apiSecret, topic, idColumnName,
       schemaRegistryUrl, srApiKey, srApiSecret, schemaRegistry,
       IOFormat.KAFKA, ops = ops)
   }

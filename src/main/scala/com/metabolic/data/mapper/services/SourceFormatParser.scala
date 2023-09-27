@@ -83,7 +83,7 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
 
     val topic = config.getString("topic")
 
-    new KafkaStreamSource(name, servers, apiKey, apiSecret, topic,
+    StreamSource(name, servers, apiKey, apiSecret, topic,
       schemaRegistryUrl, srApiKey, srApiSecret, schemaRegistry,
       IOFormat.KAFKA, ops = ops)
   }
