@@ -32,10 +32,17 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
       s"$dbName.$tableName"
   }
 
+  def dropViewStatement(dbName: String, viewName: String): String = {
+
+    s"DROP VIEW IF EXISTS " +
+      s"$dbName.$viewName"
+  }
+
   def createDeltaTable(dbName:String, tableName:String, location: String, recreate: Boolean = false) = {
 
-    if(recreate)
+    if(recreate) {
       dropDeltaTable(dbName, tableName)
+    }
 
     val statement = createTableStatement(dbName, tableName, location)
     logger.info(s"Create table statement for ${dbName}.${tableName} is ${statement}")
