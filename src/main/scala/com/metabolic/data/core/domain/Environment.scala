@@ -13,5 +13,5 @@ case class Environment(name: String,
                        autoSchema: Boolean = false,
                        namespaces: Seq[String] = Seq.empty,
                        infix_namespaces: Seq[String] = Seq.empty,
-                       enableJDBC: Boolean,
-                       queryOutputLocation: Option[String])
+                       enableJDBC: Boolean = false,
+                       queryOutputLocation: String = "")

@@ -93,9 +93,9 @@ class ConfigParserService(implicit region: Regions) extends Logging {
     }
 
     val queryOutputLocation = if (config.hasPathOrNull("queryOutputLocation")) {
-      Option.apply(config.getString("queryOutputLocation"))
+      config.getString("queryOutputLocation")
     } else {
-      Option.empty
+      ""
     }
 
     Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, atlanToken, atlanBaseUrl,historical, autoSchema, namespaces, infix_namespaces, enableJDBC, queryOutputLocation)

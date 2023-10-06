@@ -32,5 +32,6 @@ class TableReader(fqn : String, enableJDBC: Boolean, queryOutputLocation: String
 }
 
 object TableReader {
-  def apply(fqn: String) = new TableReader(fqn)
+  def apply(fqn: String, enableJDBC: Boolean, queryOutputLocation: String) = new TableReader(fqn, enableJDBC, queryOutputLocation)
+
 }

@@ -16,7 +16,7 @@ object MetabolicReader extends Logging {
 
  def read(source: Source, historical: Boolean, mode: EngineMode, enableJDBC: Boolean, queryOutputLocation: String)(implicit spark: SparkSession) = {
 
-  val input = readSource(source, mode, spark, enableJDBC)
+  val input = readSource(source, mode, spark, enableJDBC, queryOutputLocation)
 
   val prepared = prepareSource(source, historical, input)
 
