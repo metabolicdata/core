@@ -93,7 +93,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
   def transform(mapping: Config)(implicit spark: SparkSession, region: Regions): Unit = {
 
     mapping.sources.foreach { source =>
-      MetabolicReader.read(source, mapping.environment.historical, mapping.environment.mode)
+      MetabolicReader.read(source, mapping.environment.historical, mapping.environment.mode, mapping.environment.enableJDBC, mapping.environment.queryOutputLocation)
     }
 
     mapping.mappings.foreach { mapping =>

@@ -86,7 +86,19 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       Seq.empty
     }
 
-    Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, atlanToken, atlanBaseUrl,historical, autoSchema, namespaces, infix_namespaces)
+    val enableJDBC = if (config.hasPathOrNull("enableJDBC")) {
+      config.getBoolean("enableJDBC")
+    } else {
+      false
+    }
+
+    val queryOutputLocation = if (config.hasPathOrNull("queryOutputLocation")) {
+      Option.apply(config.getString("queryOutputLocation"))
+    } else {
+      Option.empty
+    }
+
+    Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, atlanToken, atlanBaseUrl,historical, autoSchema, namespaces, infix_namespaces, enableJDBC, queryOutputLocation)
   }
 
   private def parseDefaults(config: HoconConfig) = {
