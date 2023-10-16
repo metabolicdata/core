@@ -78,7 +78,7 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val source = getFileSource(inputPath, tableName, IOFormat.PARQUET.toString).head
 
-    MetabolicReader.read(source, true, EngineMode.Batch)(spark)
+    MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
 
     val result = spark.table(tableName)
 
@@ -103,7 +103,7 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val source = getFileSource(inputPath, tableName, IOFormat.JSON.toString).head
 
-    MetabolicReader.read(source, true, EngineMode.Batch)(spark)
+    MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
 
     val result = spark.table(tableName)
 
@@ -129,7 +129,7 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val source = getFileSource(inputPath, tableName, IOFormat.CSV.toString).head
 
-    MetabolicReader.read(source, true, EngineMode.Batch)(spark)
+    MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
 
     val result = spark.table(tableName)
 
@@ -153,7 +153,7 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val source = getFileSource(inputPath, tableName, IOFormat.DELTA.toString).head
 
-    MetabolicReader.read(source, true, EngineMode.Batch)(spark)
+    MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
 
     val result = spark.table(tableName)
 
