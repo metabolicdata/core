@@ -32,16 +32,20 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
       s"$dbName.$tableName"
   }
 
-  def dropViewStatement(dbName: String, viewName: String): String = {
+  def dropView(dbName: String, viewName: String) = {
 
-    s"DROP VIEW IF EXISTS " +
+    val statement = s"DROP VIEW IF EXISTS " +
       s"$dbName.$viewName"
+
+    dropTable(dbName, viewName, statement)
+
   }
 
   def createDeltaTable(dbName:String, tableName:String, location: String, recreate: Boolean = false) = {
 
     if(recreate) {
-      dropDeltaTable(dbName, tableName)
+      val delete_statement = dropTableStatement(dbName, tableName)
+      dropTable(dbName, tableName, delete_statement)
     }
 
     val statement = createTableStatement(dbName, tableName, location)
@@ -59,9 +63,8 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
 
   }
 
-  private def dropDeltaTable(dbName: String, tableName: String) = {
+  private def dropTable(dbName: String, tableName: String, statement: String) = {
 
-    val statement = dropTableStatement(dbName, tableName)
     logger.info(s"Drop table statement for ${dbName}.${tableName} is ${statement}")
     val queryExecutionContext = new QueryExecutionContext().withDatabase(dbName)
     //val resultConfiguration = new ResultConfiguration().withOutputLocation(path)
@@ -71,8 +74,8 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
       .withQueryExecutionContext(queryExecutionContext)
     //.withResultConfiguration(resultConfiguration)
     val queryExecutionId = athenaClient.startQueryExecution(startQueryExecutionRequest).getQueryExecutionId
-    logger.info(s"Table ${dbName}.${tableName} has been created")
     val getQueryResultsRequest = new GetQueryResultsRequest().withQueryExecutionId(queryExecutionId)
+    logger.info(s"Query result is: ${getQueryResultsRequest}")
 
   }
 

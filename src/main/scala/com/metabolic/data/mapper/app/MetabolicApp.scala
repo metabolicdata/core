@@ -138,7 +138,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       val prefix = ConfigUtilsService.getTablePrefix(options.namespaces, s3Path)
       val tableName = prefix+ConfigUtilsService.getTableName(config)
 
-      new AthenaCatalogueService().dropViewStatement(dbName, tableName)
+      new AthenaCatalogueService().dropView(dbName, tableName)
 
       config.sink.format match {
         case IOFormat.DELTA => new AthenaCatalogueService().createDeltaTable(dbName, tableName, s3Path)
