@@ -41,7 +41,7 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
 
   }
 
-  def createDeltaTable(dbName:String, tableName:String, location: String, recreate: Boolean = false) = {
+  def createDeltaTable(dbName:String, tableName:String, location: String, recreate: Boolean = true) = {
 
     if(recreate) {
       val delete_statement = dropTableStatement(dbName, tableName)
