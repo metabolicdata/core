@@ -55,7 +55,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'eu-central-1'
           S3_BUCKET: ${{ secrets.AWS_BUCKET }}
-          S3_KEY: '/platform/core/latest/MapperEntrypoint.scala'
+          S3_KEY: platform/core/latest/MapperEntrypoint.scala
           FILE: ./MapperEntrypoint.scala
 
       - name: Download jar
@@ -72,7 +72,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'eu-central-1'
           S3_BUCKET: ${{ secrets.AWS_BUCKET }}
-          S3_KEY: '/platform/core/latest/metabolic-core-assembly.jar'
+          S3_KEY: platform/core/latest/metabolic-core-assembly.jar
           FILE: ./metabolic-core-assembly-SNAPSHOT.jar
 
   deploy-release:
@@ -98,7 +98,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'eu-central-1'
           S3_BUCKET: ${{ secrets.AWS_BUCKET }}
-          S3_KEY: ${{ format('/platform/core/{0}/MapperEntrypoint.scala', env.GIT_BRANCH_NAME) }}
+          S3_KEY: ${{ format('platform/core/{0}/MapperEntrypoint.scala', env.GIT_BRANCH_NAME) }}
           FILE: ./MapperEntrypoint.scala
 
       - name: Download jar
@@ -115,5 +115,5 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'eu-central-1'
           S3_BUCKET: ${{ secrets.AWS_BUCKET }}
-          S3_KEY: ${{ format('/platform/core/{0}/metabolic-core-assembly.jar', env.GIT_BRANCH_NAME) }}
+          S3_KEY: ${{ format('platform/core/{0}/metabolic-core-assembly.jar', env.GIT_BRANCH_NAME) }}
           FILE: ./metabolic-core-assembly-SNAPSHOT.jar
