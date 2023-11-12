@@ -36,15 +36,14 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
           .write
           .partitionBy(partitionColumnNames: _*)
           .mode(SaveMode.Append)
-          .option("header", true)
+          .option("mergeSchema", "true")
           .delta(outputPath)
         case WriteMode.Overwrite => df
-          df
-            .write
-            .partitionBy(partitionColumnNames: _*)
-            .mode(SaveMode.Overwrite)
-            .option("overwriteSchema", "true")
-            .delta(outputPath)
+          .write
+          .partitionBy(partitionColumnNames: _*)
+          .mode(SaveMode.Overwrite)
+          .option("overwriteSchema", "true")
+          .delta(outputPath)
         case WriteMode.Upsert => upsertToDelta(df)
       }
     } else {
@@ -66,7 +65,7 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
           .writeStream
           .partitionBy(partitionColumnNames: _*)
           .outputMode("complete")
-          .option("mergeSchema", "true")
+          .option("overwriteSchema", "true")
           .option("checkpointLocation", checkpointLocation)
           .start(output_identifier)
         case WriteMode.Upsert => df
@@ -75,6 +74,7 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
           .partitionBy(partitionColumnNames: _*)
           .foreachBatch(upsertToDelta _)
           .outputMode("update")
+          .option("mergeSchema", "true")
           .start(output_identifier)
       }
     }

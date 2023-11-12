@@ -256,7 +256,7 @@ class DeltaWriterTest extends AnyFunSuite
 
     val secondWriter = new DeltaWriter(
       path,
-      WriteMode.Append,
+      WriteMode.Upsert,
       Option(""),
       Option("name"),
       "default",
@@ -377,7 +377,7 @@ class DeltaWriterTest extends AnyFunSuite
 
   test("Tests Delta Append New Column") {
 
-    val path = "src/test/tmp/delta/letters_new_column"
+    val path = "src/test/tmp/delta/letters_append_new_column"
 
     val sqlCtx = sqlContext
 
@@ -461,7 +461,7 @@ class DeltaWriterTest extends AnyFunSuite
 
   test("Tests Delta Upsert New Column") {
 
-    val path = "src/test/tmp/delta/letters_new_column"
+    val path = "src/test/tmp/delta/letters_upsert_new_column"
 
     val sqlCtx = sqlContext
 
@@ -488,8 +488,8 @@ class DeltaWriterTest extends AnyFunSuite
 
 
     val updateData = Seq(
-      Row("Alpha", "a", 2022, 2, 5, "2022-02-05", "extra"),
-      Row("Beta", "b", 2022, 2, 4, "2022-02-04", "extra")
+      Row("A", "alpha", 2022, 2, 5, "2022-02-05", "extra"),
+      Row("B", "beta", 2022, 2, 4, "2022-02-04", "extra")
     )
 
     val updateSchema = List(
@@ -519,16 +519,14 @@ class DeltaWriterTest extends AnyFunSuite
 
 
     val expectedData = Seq(
-      Row("A", "a", 2022, 2, 5, "2022-02-05", null),
-      Row("B", "b", 2022, 2, 4, "2022-02-04", null),
+      Row("A", "alpha", 2022, 2, 5, "2022-02-05", "extra"),
+      Row("B", "beta", 2022, 2, 4, "2022-02-04", "extra"),
       Row("C", "c", 2022, 2, 3, "2022-02-03", null),
       Row("D", "d", 2022, 2, 2, "2022-02-02", null),
       Row("E", "e", 2022, 2, 1, "2022-02-01", null),
       Row("F", "f", 2022, 1, 5, "2022-01-05", null),
       Row("G", "g", 2021, 2, 2, "2021-02-02", null),
-      Row("H", "h", 2020, 2, 5, "2020-02-05", null),
-      Row("Alpha", "a", 2022, 2, 5, "2022-02-05", "extra"),
-      Row("Beta", "b", 2022, 2, 4, "2022-02-04", "extra")
+      Row("H", "h", 2020, 2, 5, "2020-02-05", null)
     )
 
     val expectedDF = spark.createDataFrame(
@@ -539,7 +537,81 @@ class DeltaWriterTest extends AnyFunSuite
     val outputDf = new DeltaReader(path)
       .read(sqlCtx.sparkSession, EngineMode.Batch)
 
-    println("SCHEMA: " + outputDf.schema.json)
+    //outputDf.show(20, false)
+
+    assertDataFrameNoOrderEquals(expectedDF, outputDf)
+  }
+
+  test("Tests Delta Delete") {
+
+    val path = "src/test/tmp/delta/letters_delete"
+
+    val sqlCtx = sqlContext
+
+    val inputDF = spark.createDataFrame(
+      spark.sparkContext.parallelize(inputData),
+      StructType(someSchema)
+    )
+
+    //Create table
+    val emptyRDD = spark.sparkContext.emptyRDD[Row]
+    val emptyDF = spark.createDataFrame(emptyRDD, inputDF.schema)
+    emptyDF
+      .write
+      .format("delta")
+      .mode(SaveMode.Append)
+      .save(path)
+
+    val firstWriter = new DeltaWriter(path,
+      WriteMode.Overwrite,
+      Option("date"), Option("name"),
+      "default", "", Seq.empty[String])(region, spark)
+
+    firstWriter.write(inputDF, EngineMode.Batch)
+
+    val deleteData = Seq(
+      Row("A", "2022-02-05", "some"),
+      Row("B", "2022-02-04", "other")
+    )
+
+    val deleteSchema = List(
+      StructField("name", StringType, true),
+      StructField("date", StringType, true),
+      StructField("ignore", StringType, true)
+    )
+
+    val deleteDF = spark.createDataFrame(
+      spark.sparkContext.parallelize(deleteData),
+      StructType(deleteSchema)
+    )
+
+    val secondWriter = new DeltaWriter(path,
+      WriteMode.Delete,
+      Option("date"),
+      Option("name"),
+      "default",
+      "",
+      Seq.empty[String])(region, spark)
+
+    secondWriter.write(deleteDF, EngineMode.Batch)
+
+
+    val expectedData = Seq(
+      Row("C", "c", 2022, 2, 3, "2022-02-03"),
+      Row("D", "d", 2022, 2, 2, "2022-02-02"),
+      Row("E", "e", 2022, 2, 1, "2022-02-01"),
+      Row("F", "f", 2022, 1, 5, "2022-01-05"),
+      Row("G", "g", 2021, 2, 2, "2021-02-02"),
+      Row("H", "h", 2020, 2, 5, "2020-02-05"),
+    )
+
+    val expectedDF = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(someSchema)
+    )
+
+    val outputDf = new DeltaReader(path)
+      .read(sqlCtx.sparkSession, EngineMode.Batch)
 
     outputDf.show(20, false)
 

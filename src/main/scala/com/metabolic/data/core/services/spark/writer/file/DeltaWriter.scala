@@ -43,31 +43,47 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
         .whenNotMatched().insertAll()
         .execute()
     }
+
+  def deleteToDelta(df: DataFrame): Unit = {
+    val deleteStatement = dateColumnNameDelta match {
+      case "" =>
+        s"output.${idColumnNameDelta} = deletes.${idColumnNameDelta}"
+      case _ =>
+        s"output.${idColumnNameDelta} = deletes.${idColumnNameDelta} AND" +
+          s" output.${dateColumnNameDelta} = deletes.${dateColumnNameDelta}"
+    }
+    DeltaTable.forPath(outputPath).as("output")
+      .merge(
+        df.as("deletes"), deleteStatement
+      )
+      .whenMatched().delete()
+      .execute()
+  }
     override def writeBatch(df: DataFrame): Unit = {
 
       writeMode match {
         case WriteMode.Append => df
           .write
           .mode(SaveMode.Append)
-          .option("overwriteSchema", "true")
           .option("mergeSchema", "true")
           .delta(outputPath)
         case WriteMode.Overwrite => df
           .write
           .mode(SaveMode.Overwrite)
           .option("overwriteSchema", "true")
-          .option("mergeSchema", "true")
           .delta(outputPath)
         case WriteMode.Upsert =>
           //Append empty to force schema update then upsert
           spark.createDataFrame(spark.sparkContext.emptyRDD[Row], df.schema)
             .write
-            .mode (SaveMode.Append)
-            .option ("overwriteSchema", "true")
-            .option ("mergeSchema", "true")
-            .delta (outputPath)
+            .mode(SaveMode.Append)
+            .option("mergeSchema", "true")
+            .delta(outputPath)
 
           upsertToDelta(df)
+        case WriteMode.Delete =>
+          deleteToDelta(df)
+        case WriteMode.Update =>
       }
 
     }
@@ -86,7 +102,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .writeStream
           .format("delta")
           .outputMode("complete")
-          .option("mergeSchema", "true")
+          .option("overwriteSchema", "true")
           .option("checkpointLocation", checkpointLocation)
           .start(output_identifier)
         case WriteMode.Upsert => df
@@ -150,7 +166,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
   override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
 
     query match {
-      case stream: StreamingQuery =>
+      case Some(stream) =>
         stream.awaitTermination()
       case None =>
         val deltaTable = DeltaTable.forPath(outputPath)
