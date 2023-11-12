@@ -15,6 +15,7 @@ import org.apache.spark.sql.streaming.StreamingQuery
 import scala.collection.Seq
 import scala.reflect.io.File
 
+@Deprecated
 class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
                            outputPath: String,
                            writeMode: WriteMode,

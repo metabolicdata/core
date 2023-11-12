@@ -5,8 +5,7 @@ import com.metabolic.data.core.services.spark.writer.DataframePartitionWriter
 import com.metabolic.data.core.services.spark.writer.file.DeltaWriter
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import io.delta.tables.DeltaTable
-import org.apache.spark.sql.streaming.StreamingQuery
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.SparkSession
 
 class DeltaZOrderWriter(val partitionColumnNames: Seq[String],
                         outputPath: String,
@@ -22,19 +21,12 @@ class DeltaZOrderWriter(val partitionColumnNames: Seq[String],
 
   override val output_identifier: String = outputPath
 
-  override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
-
-    query match {
-      case stream: StreamingQuery =>
-        stream.awaitTermination()
-      case None =>
-        val deltaTable = DeltaTable.forPath(outputPath)
-        deltaTable.optimize().executeZOrderBy(partitionColumnNames:_*)
-        deltaTable.vacuum(retention)
-    }
-
-    true
+  override def compactAndVacuum(): Unit = {
+    val deltaTable = DeltaTable.forPath(outputPath)
+    deltaTable.optimize().executeZOrderBy(partitionColumnNames: _*)
+    deltaTable.vacuum(retention)
   }
+
 
 }
 

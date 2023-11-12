@@ -8,5 +8,6 @@ object IOFormat extends Enumeration {
   val PARQUET = Value("parquet")
   val JSON = Value("json")
   val DELTA =  Value("delta")
+  val DELTA_PARTITION =  Value("delta_partition")
   val KAFKA =  Value("kafka")
 }

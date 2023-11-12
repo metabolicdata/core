@@ -1,7 +1,7 @@
 package com.metabolic.data.core.services.spark.writer.file
 
 import com.amazonaws.regions.Regions
-import com.metabolic.data.core.services.glue.{AthenaCatalogueService, GlueCatalogService}
+import com.metabolic.data.core.services.glue.AthenaCatalogueService
 import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
 import com.metabolic.data.core.services.util.ConfigUtilsService
 import com.metabolic.data.mapper.domain.io.WriteMode
@@ -15,7 +15,8 @@ import scala.reflect.io.File
 class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
                   val dateColumnName: Option[String], val idColumnName: Option[String],
                   val checkpointLocation: String,
-                  val dbName: String, val namespaces: Seq[String], val retention: Double = 168d) (implicit val region: Regions, implicit  val spark: SparkSession)
+                  val dbName: String, val namespaces: Seq[String], val retention: Double = 168d,
+                  val optimizeBatches: Long = 1000l) (implicit val region: Regions, implicit  val spark: SparkSession)
 
   extends DataframeUnifiedWriter {
 
@@ -25,9 +26,14 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
 
     private val dateColumnNameDelta: String = dateColumnName.getOrElse("")
     private val idColumnNameDelta: String = idColumnName.getOrElse("")
-    //var deltaTable: DeltaTable = null
 
-    def upsertToDelta(df: DataFrame, batchId: Long = 1): Unit = {
+    protected def compactAndVacuum(): Unit = {
+      val deltaTable = DeltaTable.forPath(outputPath)
+      deltaTable.optimize().executeCompaction()
+      deltaTable.vacuum(retention)
+    }
+
+    def upsertToDelta(df: DataFrame, batchId: Long = 1L): Unit = { //batchId is used for streaming
       val mergeStatement = dateColumnNameDelta match {
         case "" =>
           s"output.${idColumnNameDelta} = updates.${idColumnNameDelta}"
@@ -44,7 +50,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
         .execute()
     }
 
-  def deleteToDelta(df: DataFrame): Unit = {
+  def deleteToDelta(df: DataFrame, batchId: Long = 1L): Unit = { //batchId is used for streaming
     val deleteStatement = dateColumnNameDelta match {
       case "" =>
         s"output.${idColumnNameDelta} = deletes.${idColumnNameDelta}"
@@ -59,7 +65,14 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
       .whenMatched().delete()
       .execute()
   }
-    override def writeBatch(df: DataFrame): Unit = {
+
+  def optimizeDelta(df: DataFrame, batchId: Long = 1L): Unit = {
+    if (batchId % optimizeBatches == 0) {
+      compactAndVacuum
+    }
+  }
+
+  override def writeBatch(df: DataFrame): Unit = {
 
       writeMode match {
         case WriteMode.Append => df
@@ -94,6 +107,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
         case WriteMode.Append => df
           .writeStream
           .format("delta")
+          .foreachBatch(optimizeDelta _)
           .outputMode("append")
           .option("mergeSchema", "true")
           .option("checkpointLocation", checkpointLocation)
@@ -101,6 +115,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
         case WriteMode.Overwrite => df
           .writeStream
           .format("delta")
+          .foreachBatch(optimizeDelta _)
           .outputMode("complete")
           .option("overwriteSchema", "true")
           .option("checkpointLocation", checkpointLocation)
@@ -109,6 +124,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .writeStream
           .format("delta")
           .foreachBatch(upsertToDelta _)
+          .foreachBatch(optimizeDelta _)
           .outputMode("append")
           .option("mergeSchema", "true")
           .option("checkpointLocation", checkpointLocation)
@@ -169,9 +185,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
       case Some(stream) =>
         stream.awaitTermination()
       case None =>
-        val deltaTable = DeltaTable.forPath(outputPath)
-        deltaTable.optimize().executeCompaction()
-        deltaTable.vacuum(retention)
+        compactAndVacuum
     }
 
     true

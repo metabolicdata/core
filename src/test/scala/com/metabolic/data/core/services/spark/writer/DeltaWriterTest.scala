@@ -591,7 +591,8 @@ class DeltaWriterTest extends AnyFunSuite
       Option("name"),
       "default",
       "",
-      Seq.empty[String])(region, spark)
+      Seq.empty[String],
+      0d)(region, spark)
 
     secondWriter.write(deleteDF, EngineMode.Batch)
 

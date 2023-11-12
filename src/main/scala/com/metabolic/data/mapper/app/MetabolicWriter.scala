@@ -3,14 +3,14 @@ package com.metabolic.data.mapper.app
 import com.amazonaws.regions.Regions
 import com.metabolic.data.core.services.spark.partitioner.{DatePartitioner, Repartitioner, SchemaManagerPartitioner}
 import com.metabolic.data.core.services.spark.transformations.FlattenTransform
-import com.metabolic.data.core.services.spark.writer.partitioned_file.{CSVPartitionWriter, DeltaPartitionWriter, DeltaZOrderWriter, JSONPartitionWriter, ParquetPartitionWriter}
+import com.metabolic.data.core.services.spark.writer.partitioned_file._
 import com.metabolic.data.core.services.spark.writer.stream.KafkaWriter
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SinkOp
 import com.metabolic.data.mapper.domain.ops.sink._
 import org.apache.logging.log4j.scala.Logging
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object MetabolicWriter extends Logging {
 
@@ -115,6 +115,11 @@ object MetabolicWriter extends Logging {
 
           case IOFormat.DELTA =>
             new DeltaZOrderWriter(repartitioner.partitionColumnNames, path, fileWriteMode, fileSink.eventTimeColumnName,
+              fileSink.idColumnName, fileSink.dbName, checkpointPath, namespaces)
+              .write(_output, mode)
+
+          case IOFormat.DELTA_PARTITION =>
+            new DeltaPartitionWriter(repartitioner.partitionColumnNames, path, fileWriteMode, fileSink.eventTimeColumnName,
               fileSink.idColumnName, fileSink.dbName, checkpointPath, namespaces)
               .write(_output, mode)
 
