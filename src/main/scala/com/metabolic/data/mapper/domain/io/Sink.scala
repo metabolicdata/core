@@ -1,6 +1,7 @@
 package com.metabolic.data.mapper.domain.io
 
 import IOFormat.IOFormat
+import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import com.metabolic.data.mapper.domain.ops.{SinkOp, SourceOp}
 import org.apache.spark.sql.SaveMode
 
@@ -11,7 +12,7 @@ trait Sink {
 
   def format: IOFormat
 
-  def saveMode: SaveMode
+  def writeMode: WriteMode
 
   def ops: Seq[SinkOp]
 

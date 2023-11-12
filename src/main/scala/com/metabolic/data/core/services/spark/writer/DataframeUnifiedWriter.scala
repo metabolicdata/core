@@ -2,16 +2,17 @@ package com.metabolic.data.core.services.spark.writer
 
 import com.metabolic.data.mapper.domain.io.EngineMode
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
+import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import org.apache.logging.log4j.scala.Logging
 import org.apache.spark.sql.streaming.StreamingQuery
-import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.apache.spark.sql.DataFrame
 
 trait DataframeUnifiedWriter extends Logging {
 
   val output_identifier: String
   val checkpointLocation: String
 
-  val saveMode: SaveMode
+  val writeMode: WriteMode
 
   def writeBatch(df: DataFrame): Unit
 

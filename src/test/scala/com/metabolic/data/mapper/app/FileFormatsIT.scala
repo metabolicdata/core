@@ -47,7 +47,7 @@ class FileFormatsIT extends AnyFunSuite
       "",
       List(io.FileSource("src/test/tmp_formats/fake_parquet_employees", "employees", IOFormat.PARQUET)),
       List(SQLStatmentMapping(multilineSQL)),
-      FileSink("test", "src/test/tmp_formats/il_fake_parquet_employees_t", SaveMode.Overwrite, IOFormat.PARQUET)
+      FileSink("test", "src/test/tmp_formats/il_fake_parquet_employees_t", WriteMode.Overwrite, IOFormat.PARQUET)
     )
 
     MetabolicApp()
@@ -90,7 +90,7 @@ class FileFormatsIT extends AnyFunSuite
       "",
       List(FileSource("src/test/tmp_formats/fake_json_employees", "employees", format = IOFormat.JSON)),
       List(SQLStatmentMapping(multilineSQL)),
-      io.FileSink("test", "src/test/tmp_formats/il_fake_json_employees_t", SaveMode.Overwrite, IOFormat.JSON)
+      io.FileSink("test", "src/test/tmp_formats/il_fake_json_employees_t", WriteMode.Overwrite, IOFormat.JSON)
     )
 
     MetabolicApp()
@@ -137,7 +137,7 @@ class FileFormatsIT extends AnyFunSuite
       "",
       List(io.FileSource("src/test/tmp_formats/fake_delta_employees", "employees", format = IOFormat.DELTA)),
       List(SQLStatmentMapping(multilineSQL)),
-      io.FileSink("test", "src/test/tmp_formats/il_fake_delta_employees_t", SaveMode.Overwrite, IOFormat.DELTA,
+      io.FileSink("test", "src/test/tmp_formats/il_fake_delta_employees_t", WriteMode.Overwrite, IOFormat.DELTA,
         Option("name"), Option("age"))
     )
 
@@ -180,7 +180,7 @@ class FileFormatsIT extends AnyFunSuite
       "",
       List(MetastoreSource("fake_json_employees", "employees")),
       List(SQLStatmentMapping(multilineSQL)),
-      io.FileSink("test", "src/test/tmp_formats/table_fake_json_employees_t", SaveMode.Overwrite, IOFormat.JSON)
+      io.FileSink("test", "src/test/tmp_formats/table_fake_json_employees_t", WriteMode.Overwrite, IOFormat.JSON)
     )
 
     MetabolicApp()

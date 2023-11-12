@@ -1,6 +1,8 @@
 package com.metabolic.data.core.services.spark.writer.stream
 
 import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
+import com.metabolic.data.mapper.domain.io.WriteMode
+import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -10,7 +12,7 @@ class KafkaWriter(servers: Seq[String], apiKey: String, apiSecret: String, topic
   
   override val output_identifier: String = topic
 
-  override val saveMode: SaveMode = SaveMode.Append
+  override val writeMode: WriteMode = WriteMode.Append
 
   override def writeStream(df: DataFrame): StreamingQuery = {
 
