@@ -142,7 +142,7 @@ class DeltaWriterTest extends AnyFunSuite
 
     val firstWriter = new DeltaWriter(
       path,
-      WriteMode.Append,
+      WriteMode.Overwrite,
       Option("date"),
       Option("name"),
       "default",
