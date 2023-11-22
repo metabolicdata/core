@@ -1,12 +1,12 @@
 package com.metabolic.data.mapper.domain.io
 
-import IOFormat.{DELTA, IOFormat}
+import com.metabolic.data.mapper.domain.io.IOFormat.{DELTA, IOFormat}
+import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import com.metabolic.data.mapper.domain.ops.SinkOp
-import org.apache.spark.sql.SaveMode
 
 case class FileSink(name: String,
                     path: String,
-                    saveMode: SaveMode,
+                    writeMode: WriteMode,
                     format: IOFormat = DELTA,
                     idColumnName: Option[String] = None,
                     eventTimeColumnName: Option[String] = None,

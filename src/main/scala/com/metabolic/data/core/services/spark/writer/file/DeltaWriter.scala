@@ -1,19 +1,22 @@
 package com.metabolic.data.core.services.spark.writer.file
 
 import com.amazonaws.regions.Regions
-import com.metabolic.data.core.services.glue.{AthenaCatalogueService, GlueCatalogService}
+import com.metabolic.data.core.services.glue.AthenaCatalogueService
 import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
 import com.metabolic.data.core.services.util.ConfigUtilsService
+import com.metabolic.data.mapper.domain.io.WriteMode
+import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import io.delta.tables._
-import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 
 import scala.reflect.io.File
 
-class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
+class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
                   val dateColumnName: Option[String], val idColumnName: Option[String],
-                  val upsert: Boolean, val checkpointLocation: String,
-                  val dbName: String, namespaces: Seq[String]) (implicit val region: Regions, implicit  val spark: SparkSession)
+                  val checkpointLocation: String,
+                  val dbName: String, val namespaces: Seq[String], val retention: Double = 168d,
+                  val optimizeEvery: String = "1 hour") (implicit val region: Regions, implicit  val spark: SparkSession)
 
   extends DataframeUnifiedWriter {
 
@@ -23,83 +26,115 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
 
     private val dateColumnNameDelta: String = dateColumnName.getOrElse("")
     private val idColumnNameDelta: String = idColumnName.getOrElse("")
-    var deltaTable: DeltaTable = null
 
-
-    override def writeBatch(df: DataFrame): Unit = {
-
-      upsert match {
-        case false => {
-          df
-            .write
-            .mode(saveMode)
-            .option("overwriteSchema", "true")
-            .option("mergeSchema", "true")
-            .delta(outputPath)
-        }
-        case true => upsertToDelta(df)
-
-      }
-
+    protected def compactAndVacuum(): Unit = {
+      val deltaTable = DeltaTable.forPath(outputPath)
+      deltaTable.optimize().executeCompaction()
+      deltaTable.vacuum(retention)
     }
 
-    override def writeStream(df: DataFrame): StreamingQuery = {
-
-      upsert match {
-        case false => {
-          saveMode match {
-            case SaveMode.Append => {
-              df.writeStream
-                .format("delta")
-                .outputMode("append")
-                .option("mergeSchema", "true")
-                .option("checkpointLocation", checkpointLocation)
-                .start(output_identifier)
-
-            }
-            case SaveMode.Overwrite => {
-              df.writeStream
-                .format("delta")
-                .outputMode("complete")
-                .option("mergeSchema", "true")
-                .option("checkpointLocation", checkpointLocation)
-                .start(output_identifier)
-            }
-          }
-        }
-        case true => {
-          df.writeStream
-            .format("delta")
-            .foreachBatch(upsertToDelta _)
-            .outputMode("append")
-            .option("mergeSchema", "true")
-            .option("checkpointLocation", checkpointLocation)
-            .start(output_identifier)
-        }
+    def upsertToDelta(df: DataFrame, batchId: Long = 1L): Unit = { //batchId is used for streaming
+      val mergeStatement = dateColumnNameDelta match {
+        case "" =>
+          s"output.${idColumnNameDelta} = updates.${idColumnNameDelta}"
+        case _ =>
+          s"output.${idColumnNameDelta} = updates.${idColumnNameDelta} AND" +
+            s" output.${dateColumnNameDelta} = updates.${dateColumnNameDelta}"
       }
-
+      DeltaTable.forPath(outputPath).as("output")
+        .merge(
+          df.as("updates"), mergeStatement
+        )
+        .whenMatched().updateAll()
+        .whenNotMatched().insertAll()
+        .execute()
     }
 
-  def upsertToDelta(df: DataFrame, batchId: Long = 1): Unit = {
-    val mergeStatement = dateColumnNameDelta match {
+  def deleteToDelta(df: DataFrame, batchId: Long = 1L): Unit = { //batchId is used for streaming
+    val deleteStatement = dateColumnNameDelta match {
       case "" =>
-        s"output.${idColumnNameDelta} = updates.${idColumnNameDelta}"
+        s"output.${idColumnNameDelta} = deletes.${idColumnNameDelta}"
       case _ =>
-        s"output.${idColumnNameDelta} = updates.${idColumnNameDelta} AND" +
-          s" output.${dateColumnNameDelta} = updates.${dateColumnNameDelta}"
+        s"output.${idColumnNameDelta} = deletes.${idColumnNameDelta} AND" +
+          s" output.${dateColumnNameDelta} = deletes.${dateColumnNameDelta}"
     }
-    deltaTable.as("output")
+    DeltaTable.forPath(outputPath).as("output")
       .merge(
-        df.as("updates"), mergeStatement
+        df.as("deletes"), deleteStatement
       )
-      .whenMatched().updateAll()
-      .whenNotMatched().insertAll()
+      .whenMatched().delete()
       .execute()
   }
 
-  override def preHook(df: DataFrame): DataFrame = {
+  def optimizeDeltaInStreaming(df: DataFrame, batchId: Long = 1L): Unit = {
+      compactAndVacuum
+  }
 
-    val tableName: String = ConfigUtilsService.getTablePrefix(namespaces, output_identifier)+ConfigUtilsService.getTableNameFileSink(output_identifier)
+  override def writeBatch(df: DataFrame): Unit = {
+
+      writeMode match {
+        case WriteMode.Append => df
+          .write
+          .mode(SaveMode.Append)
+          .option("mergeSchema", "true")
+          .delta(outputPath)
+        case WriteMode.Overwrite => df
+          .write
+          .mode(SaveMode.Overwrite)
+          .option("overwriteSchema", "true")
+          .delta(outputPath)
+        case WriteMode.Upsert =>
+          //Append empty to force schema update then upsert
+          spark.createDataFrame(spark.sparkContext.emptyRDD[Row], df.schema)
+            .write
+            .mode(SaveMode.Append)
+            .option("mergeSchema", "true")
+            .delta(outputPath)
+
+          upsertToDelta(df)
+        case WriteMode.Delete =>
+          deleteToDelta(df)
+        case WriteMode.Update =>
+      }
+
+    }
+
+    override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
+
+      val data_query = writeMode match {
+        case WriteMode.Append => df
+          .writeStream
+          .outputMode("append")
+          .option("mergeSchema", "true")
+          .option("checkpointLocation", checkpointLocation)
+          .delta(output_identifier)
+
+        case WriteMode.Overwrite => df
+          .writeStream
+          .outputMode("complete")
+          .option("overwriteSchema", "true")
+          .option("checkpointLocation", checkpointLocation)
+          .delta(output_identifier)
+
+        case WriteMode.Upsert => df
+          .writeStream
+          .outputMode("append")
+          .option("checkpointLocation", checkpointLocation)
+          .foreachBatch(upsertToDelta _)
+          .start
+        }
+
+      val opt_query = df
+        .writeStream
+        .trigger(Trigger.ProcessingTime(optimizeEvery))
+        .foreachBatch(optimizeDeltaInStreaming _)
+        .start()
+
+      Seq(data_query,opt_query)
+    }
+
+
+  override def preHook(df: DataFrame): DataFrame = {
 
     if (!DeltaTable.isDeltaTable(outputPath)) {
       if (!File(outputPath).exists) {
@@ -129,24 +164,21 @@ class DeltaWriter(val outputPath: String, val saveMode: SaveMode,
           .format("delta")
           .mode(SaveMode.Append)
           .save(output_identifier)
-        //Create table in Athena
-        new AthenaCatalogueService()
-          .createDeltaTable(dbName, tableName, output_identifier)
 
       } else {
         //Convert to delta if parquet
         DeltaTable.convertToDelta(spark, s"parquet.`$outputPath`")
       }
     }
-    deltaTable = DeltaTable.forPath(outputPath)
     df
   }
 
-  override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
-    //Not for current version
-    //deltaTable.optimize().executeCompaction()
-    query.flatMap(stream => Option.apply(stream.awaitTermination()))
-    true
+  override def postHook(df: DataFrame, query: Seq[StreamingQuery]): Unit = {
+
+    if (query.isEmpty) {
+      compactAndVacuum
+    }
+
   }
 
 }

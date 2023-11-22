@@ -35,6 +35,8 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
       .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
       .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
+      .config("spark.databricks.delta.optimize.repartition.enabled", "true")
+      .config("spark.databricks.delta.vacuum.parallelDelete.enabled", "true")
       .getOrCreate()
 
     spark.sparkContext.setLogLevel("ERROR")
@@ -102,8 +104,10 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
     val output: DataFrame = spark.table("output")
 
-    MetabolicWriter.write(output, mapping.sink, mapping.environment.historical, mapping.environment.autoSchema,
+    val streamingQuery = MetabolicWriter.write(output, mapping.sink, mapping.environment.historical, mapping.environment.autoSchema,
       mapping.environment.baseCheckpointLocation, mapping.environment.mode, mapping.environment.namespaces)
+
+    streamingQuery.map { _.awaitTermination }
 
   }
 

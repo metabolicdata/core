@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
   "org.apache.kafka" % "kafka-clients" % "3.3.2",
 
-  "io.delta" %% "delta-core" % "2.1.0",
+  "io.delta" %% "delta-core" % "2.1.1",
 
   "org.apache.logging.log4j" %% "log4j-api-scala" % "12.0",
   "com.typesafe" % "config" % "1.4.0",

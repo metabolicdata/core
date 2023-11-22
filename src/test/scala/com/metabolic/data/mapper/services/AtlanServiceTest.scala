@@ -6,7 +6,7 @@ import com.metabolic.data.core.domain.{Defaults, Environment}
 import com.metabolic.data.core.services.catalogue.AtlanService
 import com.metabolic.data.core.services.util.ConfigUtilsService
 import com.metabolic.data.mapper.domain._
-import com.metabolic.data.mapper.domain.io.{EngineMode, IOFormat}
+import com.metabolic.data.mapper.domain.io.{EngineMode, IOFormat, WriteMode}
 import com.metabolic.data.mapper.domain.ops.SQLFileMapping
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.SaveMode
@@ -50,7 +50,7 @@ class AtlanServiceTest extends AnyFunSuite
       "",
       List(io.FileSource("raw/stripe/fake_employee/version=3/", "employees", IOFormat.PARQUET), io.FileSource("clean/fake_employee_s/version=123/", "employeesss", IOFormat.PARQUET), io.FileSource("raw/hubspot/owners/", "owners", IOFormat.PARQUET), io.FileSource("clean/hubspot_owners/", "clean_owners", IOFormat.PARQUET)),
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
-      io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", SaveMode.Overwrite, IOFormat.PARQUET),
+      io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
       Environment("", EngineMode.Batch, "", false, "test", "", Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
@@ -121,7 +121,7 @@ class AtlanServiceTest extends AnyFunSuite
       "",
       List(io.FileSource("raw/stripe/fake_employee/version=3/", "employees", IOFormat.PARQUET), io.FileSource("clean/fake_employee_s/version=123/", "employeesss", IOFormat.PARQUET), io.FileSource("raw/hubspot/owners/", "owners", IOFormat.PARQUET), io.FileSource("clean/hubspot_owners/", "clean_owners", IOFormat.PARQUET)),
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
-      io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", SaveMode.Overwrite, IOFormat.PARQUET),
+      io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
       Environment("", EngineMode.Batch, "", false, "test", "", Option(""),Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )

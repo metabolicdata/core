@@ -5,6 +5,8 @@ import com.metabolic.data.core.services.glue.{AthenaCatalogueService, GlueCatalo
 import com.metabolic.data.core.services.spark.writer.DataframePartitionWriter
 import com.metabolic.data.core.services.spark.writer.file.DeltaWriter
 import com.metabolic.data.core.services.util.ConfigUtilsService
+import com.metabolic.data.mapper.domain.io.WriteMode
+import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import io.delta.implicits.DeltaDataFrameWriter
 import io.delta.tables.DeltaTable
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
@@ -13,70 +15,70 @@ import org.apache.spark.sql.streaming.StreamingQuery
 import scala.collection.Seq
 import scala.reflect.io.File
 
+@Deprecated
 class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
                            outputPath: String,
-                           saveMode: SaveMode,
+                           writeMode: WriteMode,
                            dateColumnName: Option[String],
                            idColumnName: Option[String],
-                           upsert: Boolean,
                            dbName: String,
                            override val checkpointLocation: String,
                            namespaces: Seq[String])(implicit regions: Regions, spark: SparkSession)
 
-  extends DeltaWriter(outputPath, saveMode, dateColumnName, idColumnName, upsert, checkpointLocation, dbName, namespaces)
+  extends DeltaWriter(outputPath, writeMode, dateColumnName, idColumnName, checkpointLocation, dbName, namespaces)
     with DataframePartitionWriter {
 
   override val output_identifier: String = outputPath
 
   override def writeBatch(df: DataFrame): Unit = {
     if (partitionColumnNames.size > 0) {
-      upsert match {
-        case false => {
-          df
-            .write
-            .partitionBy(partitionColumnNames: _*)
-            .mode(saveMode)
-            .option("overwriteSchema", "true")
-            .delta(outputPath)
-        }
-        case true => upsertToDelta(df)
+      writeMode match {
+        case WriteMode.Append => df
+          .write
+          .partitionBy(partitionColumnNames: _*)
+          .mode(SaveMode.Append)
+          .option("mergeSchema", "true")
+          .delta(outputPath)
+        case WriteMode.Overwrite => df
+          .write
+          .partitionBy(partitionColumnNames: _*)
+          .mode(SaveMode.Overwrite)
+          .option("overwriteSchema", "true")
+          .delta(outputPath)
+        case WriteMode.Upsert => upsertToDelta(df)
       }
     } else {
       super.writeBatch(df)
     }
   }
 
-  override def writeStream(df: DataFrame): StreamingQuery = {
+  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
     if (partitionColumnNames.size > 0) {
-      upsert match {
-        case false => {
-          saveMode match {
-            case SaveMode.Append => {
-              df.writeStream
-                .partitionBy(partitionColumnNames: _*)
-                .outputMode("append")
-                .option("mergeSchema", "true")
-                .option("checkpointLocation", checkpointLocation)
-                .start(output_identifier)
-            }
-            case SaveMode.Overwrite => {
-              df.writeStream
-                .partitionBy(partitionColumnNames: _*)
-                .outputMode("complete")
-                .option("mergeSchema", "true")
-                .option("checkpointLocation", checkpointLocation)
-                .start(output_identifier)
-            }
-          }
-        }
-        case true =>
-          df.writeStream
-            .format("delta")
-            .partitionBy(partitionColumnNames: _*)
-            .foreachBatch(upsertToDelta _)
-            .outputMode("update")
-            .start(output_identifier)
+      val query = writeMode match {
+        case WriteMode.Append => df
+          .writeStream
+          .partitionBy(partitionColumnNames: _*)
+          .outputMode("append")
+          .option("mergeSchema", "true")
+          .option("checkpointLocation", checkpointLocation)
+          .start(output_identifier)
+        case WriteMode.Overwrite => df
+          .writeStream
+          .partitionBy(partitionColumnNames: _*)
+          .outputMode("complete")
+          .option("overwriteSchema", "true")
+          .option("checkpointLocation", checkpointLocation)
+          .start(output_identifier)
+        case WriteMode.Upsert => df
+          .writeStream
+          .format("delta")
+          .partitionBy(partitionColumnNames: _*)
+          .foreachBatch(upsertToDelta _)
+          .outputMode("update")
+          .option("mergeSchema", "true")
+          .start(output_identifier)
       }
+      Seq(query)
     }
     else {
       super.writeStream(df)
@@ -126,7 +128,6 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
           DeltaTable.convertToDelta(spark, s"parquet.`$outputPath`")
         }
       }
-      deltaTable = DeltaTable.forPath(outputPath)
       df
       
     } else {
@@ -135,13 +136,6 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
 
   }
 
-  override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
-    //Not for current version
-    //deltaTable.optimize().executeCompaction()
-    query.flatMap(stream => Option.apply(stream.awaitTermination()))
-
-    true
-  }
 }
 
 
