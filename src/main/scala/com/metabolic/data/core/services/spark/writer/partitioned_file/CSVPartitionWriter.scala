@@ -33,15 +33,17 @@ class CSVPartitionWriter(val partitionColumnNames: Seq[String], outputPath: Stri
     }
   }
 
-  override def writeStream(df: DataFrame): StreamingQuery = {
+  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
 
     if(partitionColumnNames.size > 0) {
-      df
+      val query = df
         .writeStream
         .partitionBy(partitionColumnNames: _*)
         .format("csv")
         .option("path", outputPath)
         .start()
+
+      Seq(query)
 
     } else {
       super.writeStream(df)

@@ -10,6 +10,7 @@ import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SinkOp
 import com.metabolic.data.mapper.domain.ops.sink._
 import org.apache.logging.log4j.scala.Logging
+import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object MetabolicWriter extends Logging {
@@ -63,7 +64,7 @@ object MetabolicWriter extends Logging {
   }
 
   def write(df: DataFrame, sink: Sink, historical: Boolean, autoSchema: Boolean, baseCheckpointLocation: String, mode: EngineMode, namespaces: Seq[String])
-           (implicit spark: SparkSession, region: Regions) = {
+           (implicit spark: SparkSession, region: Regions): Seq[StreamingQuery] = {
 
     val _df = prepareOutput(sink, df)
 

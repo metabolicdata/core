@@ -34,16 +34,17 @@ class JSONPartitionWriter(val partitionColumnNames: Seq[String],
     }
   }
 
-  override def writeStream(df: DataFrame): StreamingQuery = {
+  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
 
     if(partitionColumnNames.size > 0) {
-      df
+      val query = df
         .writeStream
         .partitionBy(partitionColumnNames: _*)
         .format("json")
         .option("path", outputPath)
         .start()
 
+      Seq(query)
     } else {
       super.writeStream(df)
     }

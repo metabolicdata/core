@@ -14,14 +14,14 @@ class KafkaWriter(servers: Seq[String], apiKey: String, apiSecret: String, topic
 
   override val writeMode: WriteMode = WriteMode.Append
 
-  override def writeStream(df: DataFrame): StreamingQuery = {
+  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
 
     val kafkaDf = idColumnName match {
       case Some(c) => df.selectExpr(s"$c as key", "to_json(struct(*)) as value")
       case None => df.selectExpr("to_json(struct(*)) as value")
     }
 
-    kafkaDf
+    val query = kafkaDf
       .writeStream
       .format("kafka")
       .option("kafka.bootstrap.servers", servers.mkString(","))
@@ -34,7 +34,8 @@ class KafkaWriter(servers: Seq[String], apiKey: String, apiSecret: String, topic
       .option("checkpointLocation", checkpointLocation)
       .option("failOnDataLoss", false)
       .start()
-    
+
+    Seq(query)
   }
 
   override def writeBatch(df: DataFrame): Unit = {

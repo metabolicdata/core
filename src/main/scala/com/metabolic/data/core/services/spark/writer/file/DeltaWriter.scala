@@ -7,7 +7,7 @@ import com.metabolic.data.core.services.util.ConfigUtilsService
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import io.delta.tables._
-import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 
 import scala.reflect.io.File
@@ -16,7 +16,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
                   val dateColumnName: Option[String], val idColumnName: Option[String],
                   val checkpointLocation: String,
                   val dbName: String, val namespaces: Seq[String], val retention: Double = 168d,
-                  val optimizeBatches: Long = 1000l) (implicit val region: Regions, implicit  val spark: SparkSession)
+                  val optimizeEvery: String = "1 hour") (implicit val region: Regions, implicit  val spark: SparkSession)
 
   extends DataframeUnifiedWriter {
 
@@ -66,10 +66,8 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
       .execute()
   }
 
-  def optimizeDelta(df: DataFrame, batchId: Long = 1L): Unit = {
-    if (batchId % optimizeBatches == 0) {
+  def optimizeDeltaInStreaming(df: DataFrame, batchId: Long = 1L): Unit = {
       compactAndVacuum
-    }
   }
 
   override def writeBatch(df: DataFrame): Unit = {
@@ -101,43 +99,42 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
 
     }
 
-    override def writeStream(df: DataFrame): StreamingQuery = {
+    override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
 
-      writeMode match {
+      val data_query = writeMode match {
         case WriteMode.Append => df
           .writeStream
-          .format("delta")
-          .foreachBatch(optimizeDelta _)
           .outputMode("append")
           .option("mergeSchema", "true")
           .option("checkpointLocation", checkpointLocation)
-          .start(output_identifier)
+          .delta(output_identifier)
+
         case WriteMode.Overwrite => df
           .writeStream
-          .format("delta")
-          .foreachBatch(optimizeDelta _)
           .outputMode("complete")
           .option("overwriteSchema", "true")
           .option("checkpointLocation", checkpointLocation)
-          .start(output_identifier)
+          .delta(output_identifier)
+
         case WriteMode.Upsert => df
           .writeStream
-          .format("delta")
-          .foreachBatch(upsertToDelta _)
-          .foreachBatch(optimizeDelta _)
           .outputMode("append")
-          .option("mergeSchema", "true")
           .option("checkpointLocation", checkpointLocation)
-          .start(output_identifier)
+          .foreachBatch(upsertToDelta _)
+          .start
         }
 
+      val opt_query = df
+        .writeStream
+        .trigger(Trigger.ProcessingTime(optimizeEvery))
+        .foreachBatch(optimizeDeltaInStreaming _)
+        .start()
+
+      Seq(data_query,opt_query)
     }
 
 
-
   override def preHook(df: DataFrame): DataFrame = {
-
-    val tableName: String = ConfigUtilsService.getTablePrefix(namespaces, output_identifier)+ConfigUtilsService.getTableNameFileSink(output_identifier)
 
     if (!DeltaTable.isDeltaTable(outputPath)) {
       if (!File(outputPath).exists) {
@@ -167,9 +164,6 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .format("delta")
           .mode(SaveMode.Append)
           .save(output_identifier)
-        //Create table in Athena
-        new AthenaCatalogueService()
-          .createDeltaTable(dbName, tableName, output_identifier)
 
       } else {
         //Convert to delta if parquet
@@ -179,16 +173,12 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
     df
   }
 
-  override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
+  override def postHook(df: DataFrame, query: Seq[StreamingQuery]): Unit = {
 
-    query match {
-      case Some(stream) =>
-        stream.awaitTermination()
-      case None =>
-        compactAndVacuum
+    if (query.isEmpty) {
+      compactAndVacuum
     }
 
-    true
   }
 
 }

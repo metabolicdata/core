@@ -104,8 +104,10 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
     val output: DataFrame = spark.table("output")
 
-    MetabolicWriter.write(output, mapping.sink, mapping.environment.historical, mapping.environment.autoSchema,
+    val streamingQuery = MetabolicWriter.write(output, mapping.sink, mapping.environment.historical, mapping.environment.autoSchema,
       mapping.environment.baseCheckpointLocation, mapping.environment.mode, mapping.environment.namespaces)
+
+    streamingQuery.map { _.awaitTermination }
 
   }
 

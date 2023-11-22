@@ -52,9 +52,9 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
     }
   }
 
-  override def writeStream(df: DataFrame): StreamingQuery = {
+  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
     if (partitionColumnNames.size > 0) {
-      writeMode match {
+      val query = writeMode match {
         case WriteMode.Append => df
           .writeStream
           .partitionBy(partitionColumnNames: _*)
@@ -78,6 +78,7 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
           .option("mergeSchema", "true")
           .start(output_identifier)
       }
+      Seq(query)
     }
     else {
       super.writeStream(df)
@@ -135,13 +136,6 @@ class DeltaPartitionWriter(val partitionColumnNames: Seq[String],
 
   }
 
-  override def postHook(df: DataFrame, query: Option[StreamingQuery]): Boolean = {
-    //Not for current version
-    //deltaTable.optimize().executeCompaction()
-    query.flatMap(stream => Option.apply(stream.awaitTermination()))
-
-    true
-  }
 }
 
 

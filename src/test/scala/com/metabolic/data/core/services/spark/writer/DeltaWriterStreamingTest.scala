@@ -3,23 +3,18 @@ package com.metabolic.data.core.services.spark.writer
 import com.dimafeng.testcontainers.KafkaContainer
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.RegionedTest
-import com.metabolic.data.core.services.spark.reader.file.DeltaReader
-import com.metabolic.data.core.services.spark.reader.stream.KafkaReader
 import com.metabolic.data.core.services.spark.writer.file.DeltaWriter
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
+import io.delta.implicits.DeltaDataFrameReader
 import io.delta.tables.DeltaTable
 import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.streaming.Trigger
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.concurrent.Futures.timeout
 import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.time.{Seconds, Span}
 
 import java.io.File
 import java.util.Properties
@@ -35,68 +30,170 @@ class DeltaWriterStreamingTest extends AnyFunSuite
   override def conf: SparkConf = super.conf
     .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
     .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .set("spark.databricks.delta.optimize.repartition.enabled", "true")
+    .set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true")
+    .set("spark.databricks.delta.retentionDurationCheck.enabled", "false")
 
+
+  val lc_letters = Iterator("a", "b", "c", "d", "e", "f", "g", "h")
+  val uc_letters = lc_letters.map { _.toUpperCase }
 
   val inputData = Seq(
-    Row("A", "a", 2022, 2, 5, "2022-02-05"),
-    Row("B", "b", 2022, 2, 4, "2022-02-04"),
-    Row("C", "c", 2022, 2, 3, "2022-02-03"),
-    Row("D", "d", 2022, 2, 2, "2022-02-02"),
-    Row("E", "e", 2022, 2, 1, "2022-02-01"),
-    Row("F", "f", 2022, 1, 5, "2022-01-05"),
-    Row("G", "g", 2021, 2, 2, "2021-02-02"),
-    Row("H", "h", 2020, 2, 5, "2020-02-05")
+    Row("A", "2022-02-05"),
+    Row("b", "2022-02-04"),
+    Row("C", "2022-02-03"),
+    Row("d", "2022-02-02"),
+    Row("E", "2022-02-01"),
+    Row("f", "2022-01-05"),
+    Row("G", "2021-02-02"),
+    Row("h", "2020-02-05")
   )
 
   val someSchema = List(
     StructField("name", StringType, true),
-    StructField("data", StringType, true),
-    StructField("yyyy", IntegerType, true),
-    StructField("mm", IntegerType, true),
-    StructField("dd", IntegerType, true),
     StructField("date", StringType, true),
   )
 
-  val path = "src/test/tmp/delta/letters"
-
-
-  test("Write Delta Streaming") {
+  test("Write Delta Append Streaming") {
 
     val sqlCtx = sqlContext
 
-    val inputDF = spark.createDataFrame(
+    val path = "src/test/tmp/delta/letters_streaming_kafka_append"
+    val pathCheckpoint = s"$path/_checkpoint"
+
+    val directoryPath = new Directory(new File(pathCheckpoint))
+    directoryPath.deleteRecursively()
+
+    // Configuring kafka container
+    val topicName = "letters_streaming_kafka_append"
+
+    val container = KafkaContainer()
+    container.start()
+
+    val kafkaHost = container.bootstrapServers.replace("PLAINTEXT://", "")
+
+    val adminProperties = new Properties()
+    adminProperties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaHost)
+    val adminClient = AdminClient.create(adminProperties)
+
+    val createTopicResult = adminClient.createTopics(List(new NewTopic(topicName, 1, (1).toShort)).asJava)
+    createTopicResult.values().get(topicName).get()
+
+    val properties = new Properties()
+    properties.put("bootstrap.servers", kafkaHost)
+    properties.put("key.serializer", classOf[StringSerializer])
+    properties.put("value.serializer", classOf[StringSerializer])
+
+    // Setting up a base Delta Table
+    val batchDf = spark.createDataFrame(
       spark.sparkContext.parallelize(inputData),
       StructType(someSchema)
     )
 
-    val firstWriter = new DeltaWriter(path, WriteMode.Overwrite, Option("date"), Option("name"),
-      "", "", Seq.empty[String])(region, spark)
+    val firstWriter = new DeltaWriter(
+      path,
+      WriteMode.Overwrite,
+      Option("date"),
+      Option("name"),
+      "default",
+      "",
+      Seq.empty[String])(region, spark)
 
-    firstWriter.write(inputDF, EngineMode.Batch)
+    firstWriter.write(batchDf, EngineMode.Batch)
 
-    eventually(timeout(Span(5, Seconds))) {
-      val outputDf = new DeltaReader(path)
-        .read(sqlCtx.sparkSession, EngineMode.Batch)
-      assertDataFrameNoOrderEquals(inputDF, outputDf)
+    // Setting up Kafka reader instead of Rate (to have more control over what gets sent)
+    val inputDf = spark
+      .readStream
+      .format("kafka")
+      .option("kafka.bootstrap.servers", kafkaHost)
+      .option("subscribe", topicName)
+      .option("startingOffsets", "earliest")
+      .load()
+      .selectExpr("CAST(key AS STRING) as name", "CAST(value AS STRING) as date")
+
+    //Produce to kafka
+    val kafkaProducer = new KafkaProducer[String, String](properties)
+
+    lc_letters.take(4).foreach { letter =>
+      println(s"Sending letter $letter")
+      val record = new ProducerRecord(topicName, s"$letter", "2022-02-06")
+      kafkaProducer.send(record)
     }
+
+    kafkaProducer.flush()
+
+    // Appending Kafka contents to Delta Table
+    val secondWriter = new DeltaWriter(
+      path,
+      WriteMode.Append,
+      Option("date"),
+      Option("name"),
+      pathCheckpoint,
+      "",
+      Seq.empty[String], 168d,"5 seconds")(region, spark)
+
+    val query = secondWriter
+      .write(inputDf, EngineMode.Stream)
+
+    Thread.sleep(2000) // wait for 2 seconds
+
+    lc_letters.drop(4).foreach { letter =>
+      println(s"Sending letter $letter")
+      val record = new ProducerRecord(topicName, s"$letter", "2022-02-07")
+      kafkaProducer.send(record)
+    }
+
+    kafkaProducer.flush()
+    kafkaProducer.close()
+
+    val expectedData = Seq(
+      Row("A", "2022-02-05"),
+      Row("b", "2022-02-04"),
+      Row("C", "2022-02-03"),
+      Row("d", "2022-02-02"),
+      Row("E", "2022-02-01"),
+      Row("f", "2022-01-05"),
+      Row("G", "2021-02-02"),
+      Row("h", "2020-02-05"),
+      Row("a", "2022-02-06"),
+      Row("b", "2022-02-06"),
+      Row("c", "2022-02-06"),
+      Row("d", "2022-02-06"),
+      Row("e", "2022-02-07"),
+      Row("f", "2022-02-07"),
+      Row("g", "2022-02-07"),
+      Row("h", "2022-02-07")
+    )
+
+    val expectedDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(someSchema)
+    )
+
+    query.head.awaitTermination(10000)
+    query.head.stop()
+
+    val outputDf = spark.read.delta(path)
+    assertDataFrameNoOrderEquals(outputDf, expectedDf)
+
+    /*eventually(timeout(Span(10, Seconds))) {
+
+    }*/
 
   }
 
-  test("Write Delta Streaming from kafka") {
+  test("Write Delta Upsert Streaming") {
 
     val sqlCtx = sqlContext
 
-    val pathCheckpoint = "src/test/tmp/delta/checkpoint"
-    val path = "src/test/tmp/delta/letters_3"
+    val path = "src/test/tmp/delta/letters_streaming_kafka_upsert_name"
+    val pathCheckpoint = s"$path/_checkpoint"
 
-    val directoryPath = new Directory(new File(path))
+    val directoryPath = new Directory(new File(pathCheckpoint))
     directoryPath.deleteRecursively()
 
-    val directoryCheckpoint = new Directory(new File(pathCheckpoint))
-    directoryCheckpoint.deleteRecursively()
-
     // Configuring kafka container
-    val topicName = "test"
+    val topicName = "letters_streaming_kafka_upsert"
 
     val container = KafkaContainer()
     container.start()
@@ -115,92 +212,97 @@ class DeltaWriterStreamingTest extends AnyFunSuite
     properties.put("key.serializer", classOf[StringSerializer])
     properties.put("value.serializer", classOf[StringSerializer])
 
+    // Setting up a base Delta Table
+    val batchDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(inputData),
+      StructType(someSchema)
+    )
 
-    //Set job reader + writer
-    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName)
-      .read(spark, EngineMode.Stream)
-      .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+    val firstWriter = new DeltaWriter(
+      path,
+      WriteMode.Overwrite,
+      None,
+      None,
+      "default",
+      "",
+      Seq.empty[String], 0)(region, spark)
 
-    /*
-    val writer = new DeltaWriter(path, SaveMode.Append, Option("date"), Option("name"), false, pathCheckpoint)
-    writer.write(reader, EngineMode.Stream)
-    */
+    firstWriter.write(batchDf, EngineMode.Batch)
 
-    //Create table
-    val emptyRDD = spark.sparkContext.emptyRDD[Row]
-    val emptyDF = spark.createDataFrame(emptyRDD, reader.schema)
-    emptyDF
-      .write
-      .format("delta")
-      .mode(SaveMode.Append)
-      .save(path)
-
-    val query = reader.writeStream
-      .format("delta")
-      .outputMode("append")
-      .option("mergeSchema", "true")
-      .option("checkpointLocation", pathCheckpoint)
-      .trigger(Trigger.ProcessingTime("5 seconds"))
-      .start(path)
-    query.awaitTermination(2000)
+    // Setting up Kafka reader instead of Rate (to have more control over what gets sent)
+    val inputDf = spark
+      .readStream
+      .format("kafka")
+      .option("kafka.bootstrap.servers", kafkaHost)
+      .option("subscribe", topicName)
+      .option("startingOffsets", "earliest")
+      .load()
+      .selectExpr("CAST(key AS STRING) as name", "CAST(value AS STRING) as date")
 
     //Produce to kafka
     val kafkaProducer = new KafkaProducer[String, String](properties)
 
-    (0 to 5).foreach { i =>
-      val record = new ProducerRecord(topicName, s"$i", s"event num $i")
-      kafkaProducer.send(record)
-    }
+    kafkaProducer.send(new ProducerRecord(topicName, "a", "2022-02-06"))
+    kafkaProducer.send(new ProducerRecord(topicName, "b", "2022-02-06"))
+    kafkaProducer.send(new ProducerRecord(topicName, "c", "2022-02-06"))
+    kafkaProducer.send(new ProducerRecord(topicName, "d", "2022-02-06"))
 
     kafkaProducer.flush()
-    kafkaProducer.close()
 
-    val data = Seq(
-      Row("0", "event num 0"),
-      Row("1", "event num 1"),
-      Row("2", "event num 2"),
-      Row("3", "event num 3"),
-      Row("4", "event num 4"),
-      Row("5", "event num 5")
+    // Appending Kafka contents to Delta Table
+    val secondWriter = new DeltaWriter(
+      path,
+      WriteMode.Upsert,
+      None,
+      Option("name"),
+      pathCheckpoint,
+      "",
+      Seq.empty[String],168d ,"3 seconds")(region, spark)
+
+    val query = secondWriter
+      .write(inputDf, EngineMode.Stream)
+
+    val expectedData = Seq(
+      Row("A", "2022-02-05"),
+      Row("b", "2022-02-06"), // updated
+      Row("C", "2022-02-03"),
+      Row("d", "2022-02-06"), // updated
+      Row("E", "2022-02-01"),
+      Row("f", "2022-01-05"),
+      Row("G", "2021-02-02"),
+      Row("h", "2020-02-05"),
+      Row("a", "2022-02-06"), // appended
+      Row("c", "2022-02-06") // appended
     )
 
-    val schema = List(
-      StructField("key", StringType, true),
-      StructField("value", StringType, true)
+    val expectedDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(someSchema)
     )
 
-    val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
-      StructType(schema)
-    )
+    query.head.awaitTermination(21000)
+    query.head.stop()
+    query.last.awaitTermination(6000)
+    query.last.stop()
 
-    eventually(timeout(Span(5, Seconds))) {
-      val outputDf = new DeltaReader(path)
-        .read(sqlCtx.sparkSession, EngineMode.Batch)
-      assertDataFrameNoOrderEquals(inputDF, outputDf)
-    }
+    val outputDf = spark.read.delta(path)
+    assertDataFrameNoOrderEquals(outputDf, expectedDf)
+
 
   }
 
-  test("Write Delta Streaming upsert from kafka") {
+  test("Write Delta Upsert With Timetravel Streaming") {
 
     val sqlCtx = sqlContext
 
+    val path = "src/test/tmp/delta/letters_streaming_kafka_upsert_date"
+    val pathCheckpoint = s"$path/_checkpoint"
 
-    val pathCheckpoint = "src/test/tmp/delta/checkpoint_upsert"
-    val path = "src/test/tmp/delta/letters_3"
-
-    /*
-    val directoryPath = new Directory(new File(path))
+    val directoryPath = new Directory(new File(pathCheckpoint))
     directoryPath.deleteRecursively()
 
-     */
-
-    val directoryCheckpoint = new Directory(new File(pathCheckpoint))
-    directoryCheckpoint.deleteRecursively()
-
     // Configuring kafka container
-    val topicName = "test2"
+    val topicName = "letters_streaming_kafka_upsert_date"
 
     val container = KafkaContainer()
     container.start()
@@ -219,212 +321,93 @@ class DeltaWriterStreamingTest extends AnyFunSuite
     properties.put("key.serializer", classOf[StringSerializer])
     properties.put("value.serializer", classOf[StringSerializer])
 
+    // Setting up a base Delta Table
+    val batchDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(inputData),
+      StructType(someSchema)
+    )
 
-    //Set job reader + writer
-    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName)
-      .read(spark, EngineMode.Stream)
-      .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+    val firstWriter = new DeltaWriter(
+      path,
+      WriteMode.Overwrite,
+      None,
+      None,
+      "default",
+      "",
+      Seq.empty[String], 0)(region, spark)
 
-    /*
-    val writer = new DeltaWriter(path, SaveMode.Append, Option("date"), Option("name"), false, pathCheckpoint)
-    writer.write(reader, EngineMode.Stream)
-    */
+    firstWriter.write(batchDf, EngineMode.Batch)
 
-
-    /*
-    //Create table
-    val emptyRDD = spark.sparkContext.emptyRDD[Row]
-    val emptyDF = spark.createDataFrame(emptyRDD, reader.schema)
-    emptyDF
-      .write
-      .format("delta")
-      .mode(SaveMode.Append)
-      .save(path)
-     */
-
-
-    val deltaTable = DeltaTable.forPath(path)
-
-    def upsertToDelta(microBatchOutputDF: DataFrame, batchId: Long) {
-      deltaTable.as("t")
-        .merge(
-          microBatchOutputDF.as("s"),
-          "s.key = t.key")
-        .whenMatched().updateAll()
-        .whenNotMatched().insertAll()
-        .execute()
-    }
-
-    val query = reader.writeStream
-      .format("delta")
-      .foreachBatch(upsertToDelta _)
-      .outputMode("update")
-      .option("mergeSchema", "true")
-      .option("checkpointLocation", pathCheckpoint)
-      .trigger(Trigger.ProcessingTime("15 seconds"))
-      .start()
-
-    query.awaitTermination(90000)
+    // Setting up Kafka reader instead of Rate (to have more control over what gets sent)
+    val inputDf = spark
+      .readStream
+      .format("kafka")
+      .option("kafka.bootstrap.servers", kafkaHost)
+      .option("subscribe", topicName)
+      .option("startingOffsets", "earliest")
+      .load()
+      .selectExpr("CAST(key AS STRING) as name", "CAST(value AS STRING) as date")
 
     //Produce to kafka
     val kafkaProducer = new KafkaProducer[String, String](properties)
 
-    (0 to 6).foreach { i =>
-      val record = new ProducerRecord(topicName, s"$i", s"event upsert num $i")
-      kafkaProducer.send(record)
-    }
+    kafkaProducer.send(new ProducerRecord(topicName, "a", "2022-02-06")) // append
+    kafkaProducer.send(new ProducerRecord(topicName, "b", "2022-02-04")) // hit
+    kafkaProducer.send(new ProducerRecord(topicName, "d", "2022-02-06")) // append (miss)
+    kafkaProducer.send(new ProducerRecord(topicName, "f", "2022-01-05")) // hit
 
     kafkaProducer.flush()
-    kafkaProducer.close()
 
-    //query.stop()
+    // Appending Kafka contents to Delta Table
+    val secondWriter = new DeltaWriter(
+      path,
+      WriteMode.Upsert,
+      Option("date"),
+      Option("name"),
+      pathCheckpoint,
+      "",
+      Seq.empty[String], 168d, "3 seconds")(region, spark)
+
+    val query = secondWriter
+      .write(inputDf, EngineMode.Stream)
 
 
-    val data = Seq(
-      Row("0", "event upsert num 0"),
-      Row("1", "event upsert num 1"),
-      Row("2", "event upsert num 2"),
-      Row("3", "event upsert num 3"),
-      Row("4", "event upsert num 4"),
-      Row("5", "event upsert num 5"),
-      Row("6", "event upsert num 6")
+    val expectedData = Seq(
+      Row("A", "2022-02-05"),
+      Row("b", "2022-02-04"),
+      Row("C", "2022-02-03"),
+      Row("d", "2022-02-02"),
+      Row("d", "2022-02-06"), // append
+      Row("E", "2022-02-01"),
+      Row("f", "2022-01-05"),
+      Row("G", "2021-02-02"),
+      Row("h", "2020-02-05"),
+      Row("a", "2022-02-06") // appended
     )
 
-    val schema = List(
-      StructField("key", StringType, true),
-      StructField("value", StringType, true)
+    val expectedDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(someSchema)
     )
 
-    val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
-      StructType(schema)
-    )
+    query.head.awaitTermination(21000)
+    query.head.stop()
+    query.last.awaitTermination(6000)
+    query.last.stop()
 
-    eventually(timeout(Span(30, Seconds))) {
-      val outputDf = new DeltaReader(path)
-        .read(sqlCtx.sparkSession, EngineMode.Batch)
-      assertDataFrameNoOrderEquals(inputDF, outputDf)
-    }
+    val outputDf = spark.read.delta(path)
+    assertDataFrameNoOrderEquals(outputDf, expectedDf)
 
 
   }
 
-  test("Write Delta Streaming upsert new table from kafka") {
+  ignore("Optmize adhoc") {
 
-    val sqlCtx = sqlContext
-
-
-    val pathCheckpoint = "src/test/tmp/delta/checkpoint_upsert"
-    val path = "src/test/tmp/delta/letters_4"
-
-
-    val directoryPath = new Directory(new File(path))
-    directoryPath.deleteRecursively()
-    val directoryCheckpoint = new Directory(new File(pathCheckpoint))
-    directoryCheckpoint.deleteRecursively()
-
-    // Configuring kafka container
-    val topicName = "test3"
-
-    val container = KafkaContainer()
-    container.start()
-
-    val kafkaHost = container.bootstrapServers.replace("PLAINTEXT://", "")
-
-    val adminProperties = new Properties()
-    adminProperties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaHost)
-    val adminClient = AdminClient.create(adminProperties)
-
-    val createTopicResult = adminClient.createTopics(List(new NewTopic(topicName, 1, (1).toShort)).asJava)
-    createTopicResult.values().get(topicName).get()
-
-    val properties = new Properties()
-    properties.put("bootstrap.servers", kafkaHost)
-    properties.put("key.serializer", classOf[StringSerializer])
-    properties.put("value.serializer", classOf[StringSerializer])
-
-
-    //Set job reader + writer
-    val reader = KafkaReader(Seq(kafkaHost), "", "", topicName)
-      .read(spark, EngineMode.Stream)
-      .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
-
-    /*
-    val writer = new DeltaWriter(path, SaveMode.Append, Option("date"), Option("name"), false, pathCheckpoint)
-    writer.write(reader, EngineMode.Stream)
-    */
-
-
-    //Create table
-    val emptyRDD = spark.sparkContext.emptyRDD[Row]
-    val emptyDF = spark.createDataFrame(emptyRDD, reader.schema)
-    emptyDF
-      .write
-      .format("delta")
-      .mode(SaveMode.Append)
-      .save(path)
-
-    val deltaTable = DeltaTable.forPath(path)
-
-    def upsertToDelta(microBatchOutputDF: DataFrame, batchId: Long) {
-      deltaTable.as("t")
-        .merge(
-          microBatchOutputDF.as("s"),
-          "s.key = t.key")
-        .whenMatched().updateAll()
-        .whenNotMatched().insertAll()
-        .execute()
-    }
-
-    val query = reader.writeStream
-      .format("delta")
-      .foreachBatch(upsertToDelta _)
-      .outputMode("update")
-      .option("mergeSchema", "true")
-      .option("checkpointLocation", pathCheckpoint)
-      .trigger(Trigger.ProcessingTime("15 seconds"))
-      .start()
-
-    query.awaitTermination(16000)
-
-    //Produce to kafka
-    val kafkaProducer = new KafkaProducer[String, String](properties)
-
-    (0 to 6).foreach { i =>
-      val record = new ProducerRecord(topicName, s"$i", s"event upsert num $i")
-      kafkaProducer.send(record)
-    }
-
-    kafkaProducer.flush()
-    kafkaProducer.close()
-
-
-    val data = Seq(
-      Row("0", "event upsert num 0"),
-      Row("1", "event upsert num 1"),
-      Row("2", "event upsert num 2"),
-      Row("3", "event upsert num 3"),
-      Row("4", "event upsert num 4"),
-      Row("5", "event upsert num 5"),
-      Row("6", "event upsert num 6")
-    )
-
-    val schema = List(
-      StructField("key", StringType, true),
-      StructField("value", StringType, true)
-    )
-
-    val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
-      StructType(schema)
-    )
-
-    eventually(timeout(Span(30, Seconds))) {
-      val outputDf = new DeltaReader(path)
-        .read(sqlCtx.sparkSession, EngineMode.Batch)
-      assertDataFrameNoOrderEquals(inputDF, outputDf)
-    }
-
+    val outputPath = "src/test/tmp/delta/letters_streaming_kafka_upsert_name"
+    val deltaTable = DeltaTable.forPath(outputPath)
+    deltaTable.optimize().executeCompaction()
+    deltaTable.vacuum(0)
   }
+
 
 }

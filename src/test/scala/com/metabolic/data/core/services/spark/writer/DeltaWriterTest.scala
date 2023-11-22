@@ -55,7 +55,7 @@ class DeltaWriterTest extends AnyFunSuite
       StructType(someSchema)
     )
 
-    //Create table
+    //Create table to be able to drop it later
     val emptyRDD = spark.sparkContext.emptyRDD[Row]
     val emptyDF = spark.createDataFrame(emptyRDD, inputDF.schema)
     emptyDF
@@ -142,7 +142,7 @@ class DeltaWriterTest extends AnyFunSuite
 
     val firstWriter = new DeltaWriter(
       path,
-      WriteMode.Overwrite,
+      WriteMode.Append,
       Option("date"),
       Option("name"),
       "default",
