@@ -9,27 +9,28 @@ A domain is exposed through one or more models and declared using a Config file.
 ```hoon
 entities: [
     {
-        name: "Visitor"
+        name: My Domain Entity
         sources: [
             {
-                inputPath = ${dp.dl_clean_bucket}"/google_analytics/"
-                name = "data_lake_clean_google_analytics_global_hourly_users",
-                format = "PARQUET"
-                op.filter = {
-                    onColumn = "date_time"
-                    from = ${df.start_of_yesterday}
-                    to = ${df.now}
+                catalog: data_lake.my_operational_table
+                name: data_lake_my_operational_table_last_month
+                op.filter: {
+                   onColumn: period_month
+                   from: ${df.start_of_month}
+                   to: ${df.now}
                 }
-            },
+            }
         ]
-        mapping {
-            file = ${dp.mappings_bucket}"/funnel/visitors.sql"
+        mapping: {
+            sql: "SELECT period_month, count(distinct my_category) FROM data_lake_my_operational_table_last_month GROUP BY 1"
         }
-        sink {
-            outputPath = ${dp.dl_clean_bucket}"/visitors/version=1/"
-            eventDtColumn = "date_time"
-            writeMode = "replace"
-            format = "PARQUET"
+        sink: {
+            outputPath: ${dp.dl_gold_bucket}/my_analytical_table
+            format: PARQUET
+            writeMode: replace
+            op.date_partition: {
+                col: period_month
+            }
         }
     }
 ]
