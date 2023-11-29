@@ -6,7 +6,7 @@ description: A Model is a tool to expose a data domain or part of it.
 
 A domain is exposed through one or more models and declared using a Config file.
 
-```hoon
+```yaml
 entities: [
     {
         name: My Domain Entity
