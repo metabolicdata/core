@@ -6,7 +6,7 @@ description: A Model is a tool to expose a data domain or part of it.
 
 A domain is exposed through one or more models and declared using a Config file.
 
-```hoon
+```yaml
 entities: [
     {
         name: My Domain Entity
@@ -48,8 +48,8 @@ In the Sources section you describe the entities in the Data Lake you are readin
 
 1. An **input path**
 2. A **name**
-3. (Optional) A [**format**](placeholders.md#formats "mention"). By default it's Delta.
-4. (Additionally) A **list of source [operations](placeholders.md#operations "mention").**
+3. (Optional) A [**format**](formats.md). By default it's Delta.
+4. (Additionally) A **list of source [operations](operations.md).**
 
 Before going into detail, it's important noting that everything in Metabolic is a CTE.
 
