@@ -10,6 +10,7 @@
 
 * [🫀 Models](fundamentals/models.md)
 * [💉 Operations](fundamentals/operations.md)
+* [↔️ Formats](fundamentals/formats.md)
 * [👣 Placeholders](fundamentals/placeholders.md)
 * [🦴 Sink Write Modes](fundamentals/sink-write-modes.md)
 
