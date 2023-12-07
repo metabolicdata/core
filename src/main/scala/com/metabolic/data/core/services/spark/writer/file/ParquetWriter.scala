@@ -26,16 +26,15 @@ class ParquetWriter(outputPath: String, val writeMode: WriteMode, val checkpoint
 
   }
 
-  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
+  override def writeStream(df: DataFrame): StreamingQuery = {
 
-    val query = df
+    df
       .writeStream
       .format("parquet")
       .option("path", outputPath)
       .option("checkpointLocation", checkpointLocation)
       .start()
 
-    Seq(query)
   }
 }
 

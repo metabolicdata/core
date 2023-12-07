@@ -11,6 +11,7 @@ import org.apache.spark.sql.{Row, SaveMode}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 
+
 class DeltaWriterTest extends AnyFunSuite
   with DataFrameSuiteBase
   with SharedSparkContext

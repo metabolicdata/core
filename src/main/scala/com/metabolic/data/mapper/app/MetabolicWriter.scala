@@ -119,11 +119,6 @@ object MetabolicWriter extends Logging {
               fileSink.idColumnName, fileSink.dbName, checkpointPath, namespaces)
               .write(_output, mode)
 
-          case IOFormat.DELTA_PARTITION =>
-            new DeltaPartitionWriter(repartitioner.partitionColumnNames, path, fileWriteMode, fileSink.eventTimeColumnName,
-              fileSink.idColumnName, fileSink.dbName, checkpointPath, namespaces)
-              .write(_output, mode)
-
         }
       }
     }

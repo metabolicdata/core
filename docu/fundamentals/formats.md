@@ -51,6 +51,23 @@ sink: {
 }
 ```
 
+Delta supports ***append**, **overwrite**, **upsert** and **delete*** write modes. ***Upsert** and **delete*** need an *idColumn* param to identify
+matching rows. Upsert optionally supports *eventDtColumn* to also match identical updates.
+
+For example to upsert on event_id, but maintaining historical evolution (event source without duplicates):
+```yaml
+sink: {
+    outputPath: ${ dp.dl_gold_bucket}/stream_events/
+    writeMode: upsert
+    idColumn: event_id
+    eventDtColumn: event_created_at
+    format: DELTA
+    ops: [
+      ...
+    ]
+}
+```
+
 ## Parquet
 
 Parquet is a very popular storage format ideal for data lakes, as it efficiently compresses columnar data for later

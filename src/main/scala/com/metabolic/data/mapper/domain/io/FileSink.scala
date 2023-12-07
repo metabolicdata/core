@@ -15,6 +15,7 @@ case class FileSink(name: String,
                     partitionColumnNames: Seq[String] = Seq.empty,
                     ops: Seq[SinkOp] = Seq.empty,
                     checkpointLocation: Option[String] = None,
-                    dbName: String = ""
+                    dbName: String = "",
+                    optimizeEvery: Option[Int] = None
                    )
   extends Sink

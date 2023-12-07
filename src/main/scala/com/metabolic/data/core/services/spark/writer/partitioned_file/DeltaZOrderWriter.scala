@@ -22,8 +22,10 @@ class DeltaZOrderWriter(val partitionColumnNames: Seq[String],
   override val output_identifier: String = outputPath
 
   override def compactAndVacuum(): Unit = {
+    logger.info(s"Compacting Delta table $outputPath with columns $partitionColumnNames")
     val deltaTable = DeltaTable.forPath(outputPath)
     deltaTable.optimize().executeZOrderBy(partitionColumnNames: _*)
+    logger.info(s"Vacumming Delta table $outputPath with retention $retention")
     deltaTable.vacuum(retention)
   }
 

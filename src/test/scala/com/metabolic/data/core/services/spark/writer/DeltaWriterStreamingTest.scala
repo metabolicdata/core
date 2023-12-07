@@ -14,7 +14,10 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.Eventually.eventually
+import org.scalatest.concurrent.Futures.timeout
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.time.{Seconds, Span}
 
 import java.io.File
 import java.util.Properties
@@ -130,7 +133,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       Option("name"),
       pathCheckpoint,
       "",
-      Seq.empty[String], 168d,"5 seconds")(region, spark)
+      Seq.empty[String], 168d,1)(region, spark)
 
     val query = secondWriter
       .write(inputDf, EngineMode.Stream)
@@ -170,15 +173,11 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       StructType(someSchema)
     )
 
-    query.head.awaitTermination(10000)
+    query.head.awaitTermination(30000)
     query.head.stop()
 
     val outputDf = spark.read.delta(path)
     assertDataFrameNoOrderEquals(outputDf, expectedDf)
-
-    /*eventually(timeout(Span(10, Seconds))) {
-
-    }*/
 
   }
 
@@ -257,7 +256,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       Option("name"),
       pathCheckpoint,
       "",
-      Seq.empty[String],168d ,"3 seconds")(region, spark)
+      Seq.empty[String],168d ,1)(region, spark)
 
     val query = secondWriter
       .write(inputDf, EngineMode.Stream)
@@ -366,7 +365,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       Option("name"),
       pathCheckpoint,
       "",
-      Seq.empty[String], 168d, "3 seconds")(region, spark)
+      Seq.empty[String], 168d, 1)(region, spark)
 
     val query = secondWriter
       .write(inputDf, EngineMode.Stream)

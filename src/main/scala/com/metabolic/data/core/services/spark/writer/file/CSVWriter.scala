@@ -28,9 +28,9 @@ class CSVWriter(outputPath: String, val writeMode: WriteMode, val checkpointLoca
 
   }
 
-  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
+  override def writeStream(df: DataFrame): StreamingQuery = {
 
-    val query = df
+    df
       .writeStream
       .format("csv")
       .option("path", outputPath)
@@ -38,7 +38,6 @@ class CSVWriter(outputPath: String, val writeMode: WriteMode, val checkpointLoca
       .option("checkpointLocation", checkpointLocation)
       .start()
 
-    Seq(query)
   }
 
 }
