@@ -35,18 +35,16 @@ class ParquetPartitionWriter(val partitionColumnNames: Seq[String],
     }
   }
 
-  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
+  override def writeStream(df: DataFrame): StreamingQuery = {
 
     if(partitionColumnNames.size > 0) {
 
-      val query = df
+      df
         .writeStream
         .partitionBy(partitionColumnNames: _*)
         .format("parquet")
         .option("path", outputPath)
         .start()
-
-      Seq(query)
 
     } else {
       super.writeStream(df)

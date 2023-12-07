@@ -1,13 +1,11 @@
 package com.metabolic.data.core.services.spark.writer.file
 
 import com.amazonaws.regions.Regions
-import com.metabolic.data.core.services.glue.AthenaCatalogueService
 import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
-import com.metabolic.data.core.services.util.ConfigUtilsService
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import io.delta.tables._
-import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
+import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 
 import scala.reflect.io.File
@@ -16,7 +14,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
                   val dateColumnName: Option[String], val idColumnName: Option[String],
                   val checkpointLocation: String,
                   val dbName: String, val namespaces: Seq[String], val retention: Double = 168d,
-                  val optimizeEvery: String = "1 hour") (implicit val region: Regions, implicit  val spark: SparkSession)
+                  val optimizeEvery: Int = 10) (implicit val region: Regions, implicit  val spark: SparkSession)
 
   extends DataframeUnifiedWriter {
 
@@ -28,12 +26,45 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
     private val idColumnNameDelta: String = idColumnName.getOrElse("")
 
     protected def compactAndVacuum(): Unit = {
+      logger.info(s"Compacting Delta table $outputPath")
       val deltaTable = DeltaTable.forPath(outputPath)
       deltaTable.optimize().executeCompaction()
+      logger.info(s"Vacumming Delta table $outputPath with retention $retention")
       deltaTable.vacuum(retention)
     }
 
+    def appendToDelta(df: DataFrame, batchId: Long = 1L): Unit = {
+
+      DeltaTable.forPath(outputPath).as("output")
+
+        df.write
+          .mode(SaveMode.Append)
+          .option("mergeSchema", "true")
+          .option("txnVersion", batchId).option("txnAppId", output_identifier)
+          .delta(output_identifier)
+
+      if (batchId % optimizeEvery == 0) {
+        compactAndVacuum
+      }
+
+    }
+
+  def replaceToDelta(df: DataFrame, batchId: Long = 1L): Unit = {
+    df.write
+      .mode(SaveMode.Overwrite)
+      .option("overwriteSchema", "true")
+      .option("txnVersion", batchId).option("txnAppId", output_identifier)
+      .delta(output_identifier)
+
+    if (batchId % optimizeEvery == 0) {
+      compactAndVacuum
+    }
+
+  }
+
+
     def upsertToDelta(df: DataFrame, batchId: Long = 1L): Unit = { //batchId is used for streaming
+
       val mergeStatement = dateColumnNameDelta match {
         case "" =>
           s"output.${idColumnNameDelta} = updates.${idColumnNameDelta}"
@@ -48,6 +79,10 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
         .whenMatched().updateAll()
         .whenNotMatched().insertAll()
         .execute()
+
+      if (batchId % optimizeEvery == 0) {
+        compactAndVacuum
+      }
     }
 
   def deleteToDelta(df: DataFrame, batchId: Long = 1L): Unit = { //batchId is used for streaming
@@ -64,11 +99,12 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
       )
       .whenMatched().delete()
       .execute()
+
+    if (batchId % optimizeEvery == 0) {
+      compactAndVacuum
+    }
   }
 
-  def optimizeDeltaInStreaming(df: DataFrame, batchId: Long = 1L): Unit = {
-      compactAndVacuum
-  }
 
   override def writeBatch(df: DataFrame): Unit = {
 
@@ -99,7 +135,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
 
     }
 
-    override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
+    override def writeStream(df: DataFrame): StreamingQuery = {
 
       val data_query = writeMode match {
         case WriteMode.Append => df
@@ -107,14 +143,16 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .outputMode("append")
           .option("mergeSchema", "true")
           .option("checkpointLocation", checkpointLocation)
-          .delta(output_identifier)
+          .foreachBatch(appendToDelta _)
+          .start
 
         case WriteMode.Overwrite => df
           .writeStream
           .outputMode("complete")
           .option("overwriteSchema", "true")
           .option("checkpointLocation", checkpointLocation)
-          .delta(output_identifier)
+          .foreachBatch(replaceToDelta _)
+          .start
 
         case WriteMode.Upsert => df
           .writeStream
@@ -124,13 +162,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .start
         }
 
-      val opt_query = df
-        .writeStream
-        .trigger(Trigger.ProcessingTime(optimizeEvery))
-        .foreachBatch(optimizeDeltaInStreaming _)
-        .start()
-
-      Seq(data_query,opt_query)
+      data_query
     }
 
 

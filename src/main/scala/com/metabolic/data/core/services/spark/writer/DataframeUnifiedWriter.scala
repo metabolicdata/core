@@ -16,7 +16,7 @@ trait DataframeUnifiedWriter extends Logging {
 
   def writeBatch(df: DataFrame): Unit
 
-  def writeStream(df: DataFrame): Seq[StreamingQuery]
+  def writeStream(df: DataFrame): StreamingQuery
 
   def preHook(df: DataFrame): DataFrame = { df }
 
@@ -29,7 +29,7 @@ trait DataframeUnifiedWriter extends Logging {
     logger.info(s"Executing $output_identifier preHook")
     val _df = preHook(df)
 
-    val streamingQuery = mode match {
+    val streamingQueries = mode match {
       case EngineMode.Batch =>
         logger.info(s"Writing $output_identifier as BATCH")
         writeBatch(_df)
@@ -37,14 +37,13 @@ trait DataframeUnifiedWriter extends Logging {
 
       case EngineMode.Stream =>
         logger.info(s"Writing $output_identifier as Stream")
-        writeStream(_df)
+        val query = writeStream(_df)
+        Seq(query)
     }
 
-    val streamingQueries = Seq()
-
     logger.info(s"Executing $output_identifier postHook")
-    postHook(df, streamingQuery)
-    streamingQuery
+    postHook(df, streamingQueries)
+    streamingQueries
 
   }
 

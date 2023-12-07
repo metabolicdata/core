@@ -26,15 +26,14 @@ class JSONWriter(outputPath: String, val writeMode: WriteMode, val checkpointLoc
 
   }
 
-  override def writeStream(df: DataFrame): Seq[StreamingQuery] = {
+  override def writeStream(df: DataFrame): StreamingQuery = {
 
-    val query = df
+    df
       .writeStream
       .format("json")
       .option("path", outputPath)
       .option("checkpointLocation", checkpointLocation)
       .start()
 
-    Seq(query)
   }
 }
