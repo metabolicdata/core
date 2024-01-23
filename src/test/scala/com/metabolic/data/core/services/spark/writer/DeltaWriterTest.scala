@@ -5,6 +5,7 @@ import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.services.spark.reader.file.DeltaReader
 import com.metabolic.data.core.services.spark.writer.file.DeltaWriter
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
+import io.delta.tables.DeltaTable
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Row, SaveMode}
@@ -618,6 +619,47 @@ class DeltaWriterTest extends AnyFunSuite
     outputDf.show(20, false)
 
     assertDataFrameNoOrderEquals(expectedDF, outputDf)
+  }
+
+  test("Tests Delta Optimize Batch") {
+    val path = "src/test/tmp/delta/letters_append"
+    val sqlCtx = sqlContext
+
+    val inputDF = spark.createDataFrame(
+      spark.sparkContext.parallelize(inputData),
+      StructType(someSchema)
+    )
+
+    //Create table
+    val emptyRDD = spark.sparkContext.emptyRDD[Row]
+    val emptyDF = spark.createDataFrame(emptyRDD, inputDF.schema)
+    emptyDF
+      .write
+      .format("delta")
+      .mode(SaveMode.Append)
+      .save(path)
+
+    val firstWriter = new DeltaWriter(
+      path,
+      WriteMode.Overwrite,
+      Option("date"),
+      Option("name"),
+      "default",
+      "",
+      Seq.empty[String],
+      0)(region, spark)
+
+
+    firstWriter.write(inputDF, EngineMode.Batch)
+
+    val deltaTable = DeltaTable.forPath(path)
+
+    //Get last operation
+    val lastChange = deltaTable.history(1)
+    val operation = lastChange.head().getAs[String]("operation")
+
+    assert(operation == "OPTIMIZE")
+
   }
 
 }
