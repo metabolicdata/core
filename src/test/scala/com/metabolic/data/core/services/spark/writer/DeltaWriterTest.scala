@@ -622,7 +622,7 @@ class DeltaWriterTest extends AnyFunSuite
   }
 
   test("Tests Delta Optimize Batch") {
-    val path = "src/test/tmp/delta/letters_append"
+    val path = "src/test/tmp/delta/letters_optimize"
     val sqlCtx = sqlContext
 
     val inputDF = spark.createDataFrame(
