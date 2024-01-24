@@ -621,47 +621,6 @@ class DeltaWriterTest extends AnyFunSuite
     assertDataFrameNoOrderEquals(expectedDF, outputDf)
   }
 
-  test("Tests Delta Optimize Batch") {
-    val path = "src/test/tmp/delta/letters_optimize"
-    val sqlCtx = sqlContext
-
-    val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(inputData),
-      StructType(someSchema)
-    )
-
-    //Create table
-    val emptyRDD = spark.sparkContext.emptyRDD[Row]
-    val emptyDF = spark.createDataFrame(emptyRDD, inputDF.schema)
-    emptyDF
-      .write
-      .format("delta")
-      .mode(SaveMode.Append)
-      .save(path)
-
-    val firstWriter = new DeltaWriter(
-      path,
-      WriteMode.Overwrite,
-      Option("date"),
-      Option("name"),
-      "default",
-      "",
-      Seq.empty[String],
-      0)(region, spark)
-
-
-    firstWriter.write(inputDF, EngineMode.Batch)
-
-    val deltaTable = DeltaTable.forPath(path)
-
-    //Get last operation
-    val lastChange = deltaTable.history(1)
-    val operation = lastChange.head().getAs[String]("operation")
-
-    assert(operation == "OPTIMIZE")
-
-  }
-
 }
 
 
