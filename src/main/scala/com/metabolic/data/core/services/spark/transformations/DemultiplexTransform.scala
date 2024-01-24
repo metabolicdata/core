@@ -25,7 +25,7 @@ class DemultiplexTransform(idColumns: Seq[String], val orderColumns: Seq[String]
                            date_trunc('$format', $endStatement),
                            interval 1 ${format.toLowerCase}) AS dates)
         ) AS date)
-        WHERE date <= now()"""
+        WHERE date <= date_trunc('$format', $endStatement)"""
       )
 
   }
