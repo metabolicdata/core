@@ -64,7 +64,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
     val path = "src/test/tmp/delta/letters_streaming_kafka_append"
     val pathCheckpoint = s"$path/_checkpoint"
 
-    val directoryPath = new Directory(new File(pathCheckpoint))
+    val directoryPath = new Directory(new File(path))
     directoryPath.deleteRecursively()
 
     // Configuring kafka container
