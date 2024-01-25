@@ -19,11 +19,11 @@ class DemultiplexTest extends AnyFunSuite
     val sqlCtx = sqlContext
 
     val inputData = Seq(
-      Row("Marc", new Timestamp(1641026108000L)), // 1 enero
-      Row("Marc", new Timestamp(1641803708000L)), // 10 de enero
-      Row("Ausias", new Timestamp(1644482108000L)), // 10 de febrero
-      Row("Ausias", new Timestamp(1645346108000L)), // 20 de febrero
-      Row("Marc", new Timestamp(1647765308000L)) // 20 de marzo
+      Row("Marc", Timestamp.valueOf("2022-01-01 09:35:08")), // 1 enero
+      Row("Marc", Timestamp.valueOf("2022-01-10 09:35:08")), // 10 de enero
+      Row("Ausias", Timestamp.valueOf("2022-02-10 09:35:08")), // 10 de febrero
+      Row("Ausias", Timestamp.valueOf("2022-02-20 09:35:08")), // 20 de febrero
+      Row("Marc", Timestamp.valueOf("2022-03-20 09:35:08")) // 20 de marzo
     )
 
     val inputSchema = List(
@@ -42,13 +42,13 @@ class DemultiplexTest extends AnyFunSuite
       .where("period <= '2022-04-30'")
 
     val expectedData = Seq(
-      Row("Marc", new Timestamp(1641803708000L), new Timestamp(1640991600000L)),   // 1 de enero
-      Row("Marc", new Timestamp(1641803708000L), new Timestamp(1643670000000L)),   //1 de febrero que no existia
-      Row("Marc", new Timestamp(1647765308000L), new Timestamp(1646089200000L)),   //1 marzo
-      Row("Marc", new Timestamp(1647765308000L), new Timestamp(1648764000000L)),   //1 de abril que no existia
-      Row("Ausias", new Timestamp(1645346108000L), new Timestamp(1643670000000L)), // 1 de febrero
-      Row("Ausias", new Timestamp(1645346108000L), new Timestamp(1646089200000L)), //1 marzo que no existia
-      Row("Ausias", new Timestamp(1645346108000L), new Timestamp(1648764000000L))  //1 de abril que no existia
+      Row("Marc", Timestamp.valueOf("2022-01-10 09:35:08"), Timestamp.valueOf("2022-01-01 00:00:00")),   // 1 de enero
+      Row("Marc", Timestamp.valueOf("2022-01-10 09:35:08"), Timestamp.valueOf("2022-02-01 00:00:00")),   //1 de febrero que no existia
+      Row("Marc", Timestamp.valueOf("2022-03-20 09:35:08"), Timestamp.valueOf("2022-03-01 00:00:00")),   //1 marzo
+      Row("Marc", Timestamp.valueOf("2022-03-20 09:35:08"), Timestamp.valueOf("2022-04-01 00:00:00")),   //1 de abril que no existia
+      Row("Ausias", Timestamp.valueOf("2022-02-20 09:35:08"), Timestamp.valueOf("2022-02-01 00:00:00")), // 1 de febrero
+      Row("Ausias", Timestamp.valueOf("2022-02-20 09:35:08"), Timestamp.valueOf("2022-03-01 00:00:00")), //1 marzo que no existia
+      Row("Ausias", Timestamp.valueOf("2022-02-20 09:35:08"), Timestamp.valueOf("2022-04-01 00:00:00"))  //1 de abril que no existia
     )
 
     val expectedSchema = List(
@@ -61,9 +61,7 @@ class DemultiplexTest extends AnyFunSuite
       StructType(expectedSchema)
     )
 
-    val set1 = outputDF.collect().toSet
-    val set2 = expectedDf.collect().toSet
-    assert(set1 == set2)
+    assertDataFrameNoOrderEquals(outputDF,expectedDf)
 
 
   }
