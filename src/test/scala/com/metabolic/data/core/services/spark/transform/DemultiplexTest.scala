@@ -14,7 +14,7 @@ class DemultiplexTest extends AnyFunSuite
   with SharedSparkContext
   with BeforeAndAfterAll {
 
-  ignore("Demultiplex by month") {
+  test("Demultiplex by month") {
     val sqlCtx = sqlContext
 
     val inputData = Seq(
