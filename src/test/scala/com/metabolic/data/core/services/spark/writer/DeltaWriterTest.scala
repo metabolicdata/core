@@ -5,6 +5,7 @@ import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.services.spark.reader.file.DeltaReader
 import com.metabolic.data.core.services.spark.writer.file.DeltaWriter
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
+import io.delta.tables.DeltaTable
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Row, SaveMode}
