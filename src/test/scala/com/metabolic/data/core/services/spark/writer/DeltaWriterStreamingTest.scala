@@ -64,7 +64,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
     val path = "src/test/tmp/delta/letters_streaming_kafka_append"
     val pathCheckpoint = s"$path/_checkpoint"
 
-    val directoryPath = new Directory(new File(pathCheckpoint))
+    val directoryPath = new Directory(new File(path))
     directoryPath.deleteRecursively()
 
     // Configuring kafka container
@@ -400,12 +400,24 @@ class DeltaWriterStreamingTest extends AnyFunSuite
 
   }
 
-  ignore("Optmize adhoc") {
+  ignore("Optimize adhoc") {
 
     val outputPath = "src/test/tmp/delta/letters_streaming_kafka_upsert_name"
     val deltaTable = DeltaTable.forPath(outputPath)
     deltaTable.optimize().executeCompaction()
     deltaTable.vacuum(0)
+  }
+
+  ignore("Check Optimized") {
+    val outputPath = "src/test/tmp/delta/letters_streaming_kafka_upsert_name"
+    val deltaTable = DeltaTable.forPath(outputPath)
+
+    //Get last operation
+    val lastChange = deltaTable.history(1)
+    val operation = lastChange.head().getAs[String]("operation")
+
+    assert(operation == "OPTIMIZE")
+
   }
 
 
