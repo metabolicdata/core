@@ -24,8 +24,7 @@ class DemultiplexTransform(idColumns: Seq[String], val orderColumns: Seq[String]
           (SELECT sequence(date_trunc( '$format', to_date('$fromDate')),
                            date_trunc('$format', $endStatement),
                            interval 1 ${format.toLowerCase}) AS dates)
-        ) AS date)
-        WHERE date <= date_trunc('$format', $endStatement)"""
+        ) AS date)"""
       )
 
   }
