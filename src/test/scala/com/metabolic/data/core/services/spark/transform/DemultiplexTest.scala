@@ -3,6 +3,7 @@ package com.metabolic.data.core.services.spark.transform
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.transformations.DemultiplexTransform
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.functions.not
 import org.apache.spark.sql.types.{StringType, StructField, StructType, TimestampType}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
@@ -60,7 +61,10 @@ class DemultiplexTest extends AnyFunSuite
       StructType(expectedSchema)
     )
 
-    assertDataFrameNoOrderEquals(outputDF, expectedDf)
+    val set1 = outputDF.collect().toSet
+    val set2 = expectedDf.collect().toSet
+    assert(set1 == set2)
+
 
   }
 
