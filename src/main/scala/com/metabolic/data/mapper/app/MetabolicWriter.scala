@@ -3,14 +3,15 @@ package com.metabolic.data.mapper.app
 import com.amazonaws.regions.Regions
 import com.metabolic.data.core.services.spark.partitioner.{DatePartitioner, Repartitioner, SchemaManagerPartitioner}
 import com.metabolic.data.core.services.spark.transformations.FlattenTransform
-import com.metabolic.data.core.services.spark.writer.partitioned_file.{CSVPartitionWriter, DeltaPartitionWriter, JSONPartitionWriter, ParquetPartitionWriter}
+import com.metabolic.data.core.services.spark.writer.partitioned_file._
 import com.metabolic.data.core.services.spark.writer.stream.KafkaWriter
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SinkOp
 import com.metabolic.data.mapper.domain.ops.sink._
 import org.apache.logging.log4j.scala.Logging
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object MetabolicWriter extends Logging {
 
@@ -63,7 +64,7 @@ object MetabolicWriter extends Logging {
   }
 
   def write(df: DataFrame, sink: Sink, historical: Boolean, autoSchema: Boolean, baseCheckpointLocation: String, mode: EngineMode, namespaces: Seq[String])
-           (implicit spark: SparkSession, region: Regions) = {
+           (implicit spark: SparkSession, region: Regions): Seq[StreamingQuery] = {
 
     val _df = prepareOutput(sink, df)
 
@@ -96,7 +97,7 @@ object MetabolicWriter extends Logging {
           fileSink.path
         }
 
-        val fileSaveMode = if(historical) { SaveMode.Overwrite} else { fileSink.saveMode }
+        val fileWriteMode = if(historical) { WriteMode.Overwrite} else { fileSink.writeMode }
 
         val repartitioner = prepareSink(sink)(_df.sparkSession)
 
@@ -104,21 +105,20 @@ object MetabolicWriter extends Logging {
         fileSink.format match {
 
           case IOFormat.CSV =>
-            new CSVPartitionWriter(repartitioner.partitionColumnNames, path, fileSaveMode, checkpointPath)
+            new CSVPartitionWriter(repartitioner.partitionColumnNames, path, fileWriteMode, checkpointPath)
               .write(_output, mode)
 
           case IOFormat.JSON =>
-            new JSONPartitionWriter(repartitioner.partitionColumnNames, path, fileSaveMode, checkpointPath)
+            new JSONPartitionWriter(repartitioner.partitionColumnNames, path, fileWriteMode, checkpointPath)
               .write(_output, mode)
 
           case IOFormat.PARQUET =>
-            new ParquetPartitionWriter(repartitioner.partitionColumnNames, path, fileSaveMode, checkpointPath)
+            new ParquetPartitionWriter(repartitioner.partitionColumnNames, path, fileWriteMode, checkpointPath)
               .write(_output, mode)
 
           case IOFormat.DELTA =>
-            new DeltaPartitionWriter(repartitioner.partitionColumnNames, path, fileSaveMode,
-              fileSink.eventTimeColumnName, fileSink.idColumnName, fileSink.upsert,
-              fileSink.dbName, checkpointPath, namespaces)
+            new DeltaZOrderWriter(repartitioner.partitionColumnNames, path, fileWriteMode, fileSink.eventTimeColumnName,
+              fileSink.idColumnName, fileSink.dbName, checkpointPath, namespaces)
               .write(_output, mode)
 
         }

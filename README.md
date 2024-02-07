@@ -8,7 +8,7 @@ Metabolic is a data tool for software developers to easly create and mantain an 
 
 Safely add, modify or deprecate columns, tables or streams while mantaining service for downstream applications, such as BI dashboards, Analytics products and Machine Learning.
 
-You can read more at https://marc-from-mg-eu.gitbook.io/metabolic/
+You can read more at https://docs.getmetabolic.io
 
 ## Running metabolic
 

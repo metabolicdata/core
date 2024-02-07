@@ -14,9 +14,9 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object MetabolicReader extends Logging {
 
- def read(source: Source, historical: Boolean, mode: EngineMode)(implicit spark: SparkSession) = {
+ def read(source: Source, historical: Boolean, mode: EngineMode, enableJDBC: Boolean, queryOutputLocation: String)(implicit spark: SparkSession) = {
 
-  val input = readSource(source, mode, spark)
+  val input = readSource(source, mode, spark, enableJDBC, queryOutputLocation)
 
   val prepared = prepareSource(source, historical, input)
 
@@ -24,7 +24,7 @@ object MetabolicReader extends Logging {
 
  }
 
- private def readSource(source: Source, mode: EngineMode, spark: SparkSession) = {
+ private def readSource(source: Source, mode: EngineMode, spark: SparkSession, enableJDBC: Boolean, queryOutputLocation: String) = {
   source match {
 
    case streamSource: StreamSource => {
@@ -60,7 +60,7 @@ object MetabolicReader extends Logging {
    case meta: MetastoreSource => {
     logger.info(s"Reading source ${meta.fqn} already in metastore")
 
-    new TableReader(meta.fqn)
+    new TableReader(meta.fqn, enableJDBC, queryOutputLocation)
       .read(spark, mode)
 
    }

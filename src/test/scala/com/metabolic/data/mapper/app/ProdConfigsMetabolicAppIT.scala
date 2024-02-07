@@ -36,7 +36,7 @@ class ProdConfigsMetabolicAppIT extends AnyFunSuite
       .parseConfig(config)
 
     parsedConfig.head.sources.foreach { source =>
-      MetabolicReader.read(source, true, EngineMode.Batch)(spark)
+      MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
     }
 
 

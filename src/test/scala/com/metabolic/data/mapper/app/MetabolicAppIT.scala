@@ -5,7 +5,7 @@ import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.domain.{Defaults, Environment}
 import com.metabolic.data.core.services.util.ConfigReaderService
 import com.metabolic.data.mapper.domain._
-import com.metabolic.data.mapper.domain.io.{EngineMode, FileSink, FileSource, IOFormat}
+import com.metabolic.data.mapper.domain.io.{EngineMode, FileSink, FileSource, IOFormat, WriteMode}
 import com.metabolic.data.mapper.domain.ops.sink.ManageSchemaSinkOp
 import com.metabolic.data.mapper.domain.ops.{SQLFileMapping, SQLStatmentMapping}
 import com.metabolic.data.mapper.services.ConfigParserService
@@ -59,7 +59,7 @@ class MetabolicAppIT extends AnyFunSuite
       "",
       List(FileSource("src/test/tmp/fake_employee", "employees", IOFormat.PARQUET)),
       List(SQLStatmentMapping(multilineSQL)),
-      FileSink("test", "src/test/tmp/fake_employee_2", SaveMode.Overwrite, IOFormat.PARQUET)
+      FileSink("test", "src/test/tmp/fake_employee_2", WriteMode.Overwrite, IOFormat.PARQUET)
     )
 
     MetabolicApp()
@@ -100,7 +100,7 @@ class MetabolicAppIT extends AnyFunSuite
       "",
       List(io.FileSource("src/test/tmp/fake_employee", "employees", IOFormat.PARQUET)),
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
-      io.FileSink("test", "src/test/tmp/f_fake_employee_t", SaveMode.Overwrite, IOFormat.PARQUET)
+      io.FileSink("test", "src/test/tmp/f_fake_employee_t", WriteMode.Overwrite, IOFormat.PARQUET)
 
     )
 
@@ -240,7 +240,7 @@ class MetabolicAppIT extends AnyFunSuite
       "",
       List(io.FileSource("src/test/tmp/fake_employee_append", "employees", IOFormat.PARQUET)),
       List(SQLStatmentMapping("select name from employees")),
-      io.FileSink("test", "src/test/tmp/fake_employee_append_nt", SaveMode.Overwrite, IOFormat.PARQUET)
+      io.FileSink("test", "src/test/tmp/fake_employee_append_nt", WriteMode.Overwrite, IOFormat.PARQUET)
     )
 
     MetabolicApp()
@@ -262,7 +262,7 @@ class MetabolicAppIT extends AnyFunSuite
         io.FileSource("src/test/resources/prod/old_companies", "factorial_s3_companies", IOFormat.PARQUET),
         io.FileSource("src/test/resources/prod/dl_singups", "factorial_clean_singups", IOFormat.PARQUET)),
       List(new SQLFileMapping("/Users/marcg/Documents/Code/Factorial/data-platform/mappings/funnel/companies.sql", region)),
-      io.FileSink("test", "src/test/tmp/prod_companies_2", SaveMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("completed_at"))
+      io.FileSink("test", "src/test/tmp/prod_companies_2", WriteMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("completed_at"))
     )
 
     MetabolicApp()
@@ -299,7 +299,7 @@ class MetabolicAppIT extends AnyFunSuite
           dedupeColumns = Seq("id"))*/
       ),
       List(new SQLFileMapping("/Users/marcg/Documents/Code/Factorial/data-platform/mappings/funnel/inbound_leads.sql",region)),
-      io.FileSink("test", "src/test/tmp/prod_mkt_qualies_2", SaveMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("updated_at"))
+      io.FileSink("test", "src/test/tmp/prod_mkt_qualies_2", WriteMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("updated_at"))
 
     )
 
@@ -327,7 +327,7 @@ class MetabolicAppIT extends AnyFunSuite
       List(
         io.FileSource("src/test/resources/prod/customers_mrr_no_rn", "factorial_clean_customers_mrr", IOFormat.PARQUET)),//, readMode = SourceReadMode.DERIVED_SNAPSHOT)),
       List(new SQLFileMapping("mappings/funnel/customers_mrr_animal.sql",region)),
-      io.FileSink("test", "src/test/tmp/prod_customers_mrr", SaveMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("updated_at"))
+      io.FileSink("test", "src/test/tmp/prod_customers_mrr", WriteMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("updated_at"))
 
     )
 
@@ -386,7 +386,7 @@ class MetabolicAppIT extends AnyFunSuite
       List(
         io.FileSource("src/test/tmp/vowelsv1_i", "vowels", IOFormat.PARQUET)),
       List(SQLStatmentMapping("WITH a as (SELECT * from vowels) SELECT *, make_date(yyyy,mm,dd) as date from a")),
-      io.FileSink("test", "src/test/tmp/vowelsv1_o", SaveMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("date"), ops = Seq(ManageSchemaSinkOp())),
+      io.FileSink("test", "src/test/tmp/vowelsv1_o", WriteMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("date"), ops = Seq(ManageSchemaSinkOp())),
       Defaults(ConfigFactory.load()),
       Environment("", EngineMode.Batch, "", false,"dbName","",Option.empty, Option.empty,false, true)
 
@@ -462,7 +462,7 @@ class MetabolicAppIT extends AnyFunSuite
       List(
         io.FileSource("src/test/tmp/vowels_i", "vowels", IOFormat.PARQUET)),
       List(SQLStatmentMapping("WITH a as (SELECT * from vowels) SELECT *, CAST(make_date(yyyy,mm,dd) as string) as date from a")),
-      io.FileSink("test", "src/test/tmp/vowels_o", SaveMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("date")),
+      io.FileSink("test", "src/test/tmp/vowels_o", WriteMode.Overwrite, IOFormat.PARQUET, eventTimeColumnName = Option("date")),
       Defaults(ConfigFactory.load()),
       Environment("", EngineMode.Batch, "",  false,"dbName","",Option.empty, Option.empty)
 

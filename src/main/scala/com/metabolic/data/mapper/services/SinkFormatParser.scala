@@ -4,6 +4,7 @@ import com.amazonaws.regions.Regions
 import com.metabolic.data.core.domain.{Environment, Platform}
 import com.metabolic.data.core.services.util.SecretsManagerService
 import com.metabolic.data.mapper.domain.KafkaConnection
+import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SinkOp
 import com.typesafe.config.{Config => HoconConfig}
@@ -39,9 +40,13 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
       Option(config.getString("eventDtColumn"))
     } else None
 
+    val optimizeEvery = if (config.hasPath("optimizeEvery")) {
+      Option(config.getInt("optimizeEvery"))
+    } else None
+
     val processingTimeColumnName = DateTime.now().toString
 
-    val saveMode = checkSaveMode(config)
+    val writeMode = checkWriteMode(config)
     val upsert = checkUpsert(config)
     val partitionCols = checkPartitionCols(config)
     val dbName = platform.dbName
@@ -49,9 +54,9 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
       Option(config.getString("checkpointLocation"))
     } else None
 
-    FileSink(name, path, saveMode, IOFormat.DELTA, idColumnName, eventTimeColumnName,
+    FileSink(name, path, writeMode, IOFormat.DELTA, idColumnName, eventTimeColumnName,
       processingTimeColumnName=processingTimeColumnName, partitionColumnNames = partitionCols, upsert = upsert, ops = ops,
-      checkpointLocation = checkpointLocation, dbName = dbName )
+      checkpointLocation = checkpointLocation, dbName = dbName, optimizeEvery = optimizeEvery )
   }
 
   private def parseJsonSink(name: String, config: HoconConfig, ops: Seq[SinkOp]): Sink = {
@@ -64,10 +69,10 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
 
     val processingTimeColumnName = DateTime.now().toString
 
-    val saveMode = checkSaveMode(config)
+    val writeMode = checkWriteMode(config)
     val partitionCols = checkPartitionCols(config)
 
-    FileSink(name, path, saveMode, IOFormat.JSON, eventTimeColumnName = eventTimeColumnName,
+    FileSink(name, path, writeMode, IOFormat.JSON, eventTimeColumnName = eventTimeColumnName,
       processingTimeColumnName = processingTimeColumnName, partitionColumnNames = partitionCols, ops = ops )
   }
 
@@ -81,13 +86,10 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
 
     val processingTimeColumnName = DateTime.now().toString
 
-    if (config.hasPathOrNull("writeMode") && config.getString("writeMode") != "replace") {
-      //throw error
-    }
-    val saveMode = SaveMode.Overwrite
+    val writeMode = checkWriteMode(config)
     val partitionCols = checkPartitionCols(config)
 
-    FileSink(name, path, saveMode, IOFormat.CSV, eventTimeColumnName = eventTimeColumnName,
+    FileSink(name, path, writeMode, IOFormat.CSV, eventTimeColumnName = eventTimeColumnName,
       processingTimeColumnName = processingTimeColumnName, partitionColumnNames = partitionCols, ops = ops )
   }
 
@@ -102,10 +104,10 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
 
     val processingTimeColumnName = DateTime.now().toString
 
-    val saveMode = checkSaveMode(config)
+    val writeMode = checkWriteMode(config)
     val partitionCols = checkPartitionCols(config)
 
-    FileSink(name, path, saveMode, IOFormat.PARQUET, eventTimeColumnName = eventTimeColumnName,
+    FileSink(name, path, writeMode, IOFormat.PARQUET, eventTimeColumnName = eventTimeColumnName,
       processingTimeColumnName = processingTimeColumnName, partitionColumnNames = partitionCols, ops = ops )
   }
 
@@ -141,21 +143,17 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
       IOFormat.KAFKA, ops = ops)
   }
 
-  private def checkSaveMode(config: HoconConfig): SaveMode = {
+  private def checkWriteMode(config: HoconConfig): WriteMode = {
     if (config.hasPathOrNull("writeMode")) {
-      parseSaveMode(config.getString("writeMode"))
+      parseWriteMode(config.getString("writeMode"))
     } else {
-      SaveMode.Append
+      WriteMode.Append
     }
   }
 
-  private def parseSaveMode(contents: String): SaveMode = {
+  private def parseWriteMode(contents: String): WriteMode = {
     val cleanContents = contents.toLowerCase.trim
-    cleanContents match {
-      case "replace" => SaveMode.Overwrite
-      case "append" => SaveMode.Append
-      case _ => SaveMode.Append
-    }
+    WriteMode.withName(cleanContents)
   }
 
   private def checkUpsert(config: HoconConfig): Boolean = {

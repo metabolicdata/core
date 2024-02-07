@@ -47,14 +47,14 @@ jobs:
           name: em_entrypoint
 
       - name: Upload EM Entrypoint file to S3
-        uses: qoqa/action-s3-cp@v1.1
+        uses: a-sync/s3-uploader@master
         env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'eu-central-1'
-          AWS_S3_PATH: '/platform/core/latest/MapperEntrypoint.scala'
-          FILE: 'MapperEntrypoint.scala'
+          S3_BUCKET: ${{ secrets.AWS_BUCKET }}
+          S3_KEY: platform/core/latest/MapperEntrypoint.scala
+          FILE: ./MapperEntrypoint.scala
 
       - name: Download jar
         uses: actions/download-artifact@v2
@@ -62,14 +62,14 @@ jobs:
           name: jar
 
       - name: Upload jar artifact file to S3
-        uses: qoqa/action-s3-cp@v1.1
+        uses: a-sync/s3-uploader@master
         env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'eu-central-1'
-          AWS_S3_PATH: '/platform/core/latest/metabolic-core-assembly.jar'
-          FILE: 'metabolic-core-assembly-SNAPSHOT.jar'
+          S3_BUCKET: ${{ secrets.AWS_BUCKET }}
+          S3_KEY: platform/core/latest/metabolic-core-assembly.jar
+          FILE: ./metabolic-core-assembly-SNAPSHOT.jar
 
   deploy-release:
     needs: assembly
@@ -86,14 +86,14 @@ jobs:
           name: em_entrypoint
 
       - name: Upload EM Entrypoint file to S3
-        uses: qoqa/action-s3-cp@v1.1
+        uses: a-sync/s3-uploader@master
         env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'eu-central-1'
-          AWS_S3_PATH: ${{ format('/platform/core/{0}/MapperEntrypoint.scala', env.GIT_BRANCH_NAME) }}
-          FILE: 'MapperEntrypoint.scala'
+          S3_BUCKET: ${{ secrets.AWS_BUCKET }}
+          S3_KEY: ${{ format('platform/core/{0}/MapperEntrypoint.scala', env.GIT_BRANCH_NAME) }}
+          FILE: ./MapperEntrypoint.scala
 
       - name: Download jar
         uses: actions/download-artifact@v2
@@ -101,12 +101,11 @@ jobs:
           name: jar
 
       - name: Upload jar artifact file to S3
-        uses: qoqa/action-s3-cp@v1.1
+        uses: a-sync/s3-uploader@master
         env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'eu-central-1'
-          AWS_S3_PATH: ${{ format('/platform/core/{0}/metabolic-core-assembly.jar', env.GIT_BRANCH_NAME) }}
-          FILE: 'metabolic-core-assembly-SNAPSHOT.jar'
-
+          S3_BUCKET: ${{ secrets.AWS_BUCKET }}
+          S3_KEY: ${{ format('platform/core/{0}/metabolic-core-assembly.jar', env.GIT_BRANCH_NAME) }}
+          FILE: ./metabolic-core-assembly-SNAPSHOT.jar
