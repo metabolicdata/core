@@ -20,7 +20,7 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
   private def createTableStatement(dbName: String, tableName: String, s3_location: String) = {
 
     s"CREATE EXTERNAL TABLE IF NOT EXISTS " +
-      s"$dbName.$tableName" +
+      s"`$dbName`.`$tableName`" +
       s" LOCATION '$s3_location'" +
       "TBLPROPERTIES ('table_type' = 'DELTA')"
 
