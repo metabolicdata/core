@@ -1,11 +1,11 @@
 #!/bin/bash
 
 
-# Set the path to your Spark installation
-SPARK_HOME=/Users/margon/Code/Metabolic/spark-3.3.2-bin-hadoop3/bin/
+# Optionally Set the path to your Spark installation
+#SPARK_HOME=
 
 # Set the path to the directory containing your application jar file
-APP_DIR=s3a://factorial-metabolic-gitpod
+APP_DIR=target/scala-2.12
 
 # Set the name of your application jar file
 APP_JAR=metabolic-core-assembly-SNAPSHOT.jar
@@ -73,14 +73,14 @@ fi
 echo
 
 # Submit the Spark application to the local cluster
-$SPARK_HOME/spark-submit  \
-    --packages com.amazonaws:aws-java-sdk-s3:1.12.401,com.amazonaws:aws-java-sdk-secretsmanager:1.12.401,org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2
+COMMAND='spark-submit  \
+    --packages com.amazonaws:aws-java-sdk-s3:1.12.401,com.amazonaws:aws-java-sdk-secretsmanager:1.12.401,org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.4
     --class $MAIN_CLASS  \
     --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" \
     $SPARK_CONF \
     $APP_DIR/$APP_JAR \
-    ${HISTORICAL_FLAG:-"--dp.historical false"} ${STREAMING_FLAG:-"--dp.stream false"} $METABOLIC_CONF --configFile $CONFIG_FILE
+    ${HISTORICAL_FLAG:-"--dp.historical false"} ${STREAMING_FLAG:-"--dp.stream false"} $METABOLIC_CONF --configFile $CONFIG_FILE'
 
 
-echo
+echo $COMMAND
 #eval $COMMAND

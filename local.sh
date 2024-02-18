@@ -1,0 +1,3 @@
+SPARK_COMMAND='spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2,io.delta:delta-core_2.12/2.3.0,com.amazonaws:aws-java-sdk-s3:1.12.401 --class MapperEntrypoint --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" --deploy-mode client target/scala-2.12/metabolic-core-assembly-SNAPSHOT.jar --dp.crawl false --dp.region "eu-central-1" --dp.iamrole "random" --dp.envPrefix "local/local" --dp.database "local" --dp.environment local --dp.checkpointLocation examples/data/checkpoints --configFile'
+
+eval $SPARK_COMMAND examples/confs/model.conf
