@@ -37,6 +37,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
       .config("spark.databricks.delta.optimize.repartition.enabled", "true")
       .config("spark.databricks.delta.vacuum.parallelDelete.enabled", "true")
+      .enableHiveSupport()
       .getOrCreate()
 
     params.get("configJar") match {

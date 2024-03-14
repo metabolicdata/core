@@ -5,17 +5,17 @@ version := "SNAPSHOT"
 scalaVersion := "2.12.17"
 
 /* Reusable versions */
-val sparkVersion = "3.3.0"
+val sparkVersion = "3.5.0"
 val awsVersion = "1.12.401"
 val testContainersVersion = "0.40.12"
+val confluentVersion = "7.2.3"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
   "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
   "org.apache.kafka" % "kafka-clients" % "3.3.2",
 
-  "io.delta" %% "delta-core" % "2.1.1",
-
+  "io.delta" %% "delta-spark" % "3.1.0",
   "org.apache.logging.log4j" %% "log4j-api-scala" % "12.0",
   "com.typesafe" % "config" % "1.4.0",
 
@@ -57,7 +57,7 @@ dependencyOverrides ++= {
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % Test
 
 
-libraryDependencies += "com.holdenkarau" %% "spark-testing-base" % s"${sparkVersion}_1.4.0" % Test
+libraryDependencies += "com.holdenkarau" %% "spark-testing-base" % s"${sparkVersion}_1.4.7" % Test
 dependencyOverrides += "org.xerial.snappy" % "snappy-java" % "1.1.8.2" % Test
 
 libraryDependencies += "com.dimafeng" %% "testcontainers-scala-scalatest" % testContainersVersion % Test
