@@ -1,5 +1,6 @@
 package com.metabolic.data.mapper.domain
 
+import com.amazonaws.regions.Regions
 import com.metabolic.data.core.domain.{CoreConfig, Defaults, Environment}
 import com.metabolic.data.mapper.domain.io.{EngineMode, Sink, Source}
 import com.metabolic.data.mapper.domain.ops.Mapping
@@ -8,8 +9,12 @@ import com.typesafe.config.ConfigFactory
 class Config(val name: String, val sources: Seq[Source], val mappings: Seq[Mapping], val sink: Sink,
              defaults: Defaults, environment: Environment) extends CoreConfig(defaults, environment) {
 
-  def getName() = {
+  def getCanonicalName() = {
+    //regex to remove all non-alphanumeric characters
     name
+      .toLowerCase()
+      .replaceAll(" ", "-")
+
   }
 
   def getSourcesNames(): String  = {
@@ -27,7 +32,8 @@ object Config {
 
   def apply(name: String, sources: Seq[Source], mappings: Seq[Mapping], sink: Sink): Config = {
     val defaults: Defaults = Defaults(ConfigFactory.load())
-    val environment: Environment = Environment("", EngineMode.Batch, "", false,"test","",Option.empty, Option.empty)
+    val environment: Environment = Environment("", EngineMode.Batch, "", false,"test","",
+      Regions.fromName("eu-central-1"),Option.empty, Option.empty)
     new Config(name, sources, mappings, sink, defaults, environment)
   }
 }

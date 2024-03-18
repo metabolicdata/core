@@ -1,4 +1,5 @@
 package com.metabolic.data.core.domain
+import com.amazonaws.regions.Regions
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
 
 case class Environment(name: String,
@@ -7,6 +8,7 @@ case class Environment(name: String,
                        crawl: Boolean,
                        dbName: String,
                        iamRole: String,
+                       region: Regions,
                        atlanToken: Option[String],
                        atlanBaseUrl: Option[String],
                        historical: Boolean = false,

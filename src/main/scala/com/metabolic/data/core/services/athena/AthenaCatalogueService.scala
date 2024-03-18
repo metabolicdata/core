@@ -1,11 +1,10 @@
-package com.metabolic.data.core.services.glue
+package com.metabolic.data.core.services.athena
 
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.athena._
-import com.amazonaws.services.athena.model.{GetQueryResultsRequest, QueryExecutionContext, ResultConfiguration, StartQueryExecutionRequest}
+import com.amazonaws.services.athena.model.{GetQueryResultsRequest, QueryExecutionContext, StartQueryExecutionRequest}
 import org.apache.logging.log4j.scala.Logging
-import org.apache.spark.sql.{DataFrame, SparkSession}
 
 
 class AthenaCatalogueService(implicit val region: Regions) extends Logging {

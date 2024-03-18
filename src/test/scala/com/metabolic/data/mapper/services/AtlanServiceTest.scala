@@ -52,7 +52,7 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
 
     val expectedJson =
@@ -123,7 +123,7 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", Option(""),Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""),Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
     val calculatedJson = new AtlanService("foo", "foo")
       .generateMetadaBody(testingConfig)
