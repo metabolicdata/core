@@ -33,7 +33,6 @@ class ConfigParserService(implicit region: Regions) extends Logging {
     val envPrefix = config.getString("envPrefix")
     val dbname = config.getString("database")
     val iamrole = config.getString("iamrole")
-    val region = Regions.fromName("region")
     val crawl = config.getBoolean("crawl")
 
     val baseCheckpointLocation = if (config.hasPathOrNull("checkpointLocation")) {
@@ -97,6 +96,12 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       config.getString("queryOutputLocation")
     } else {
       ""
+    }
+
+    val region = if (config.hasPathOrNull("region")) {
+      Regions.fromName(config.getString("region"))
+    } else {
+      Regions.fromName("eu-central-1")
     }
 
     Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, region, atlanToken, atlanBaseUrl,historical, autoSchema, namespaces, infix_namespaces, enableJDBC, queryOutputLocation)

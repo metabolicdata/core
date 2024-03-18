@@ -23,15 +23,16 @@ class AthenaAction extends AfterAction with Logging {
 
     config.sink match {
       case sink: FileSink =>
-
-        athena.dropView(dbName, tableName)
-
-        val s3Path = sink.path.replaceAll("version=\\d+", "")
-
         sink.format match {
           case IOFormat.DELTA =>
+
             logger.info(f"After Action $name: Creating Delta Table for ${config.name}")
+
+            athena.dropView(dbName, tableName)
+
+            val s3Path = sink.path.replaceAll("version=\\d+", "")
             athena.createDeltaTable(dbName, tableName, s3Path)
+
           case _ =>
             logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a DeltaSink")
         }
