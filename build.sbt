@@ -6,7 +6,7 @@ scalaVersion := "2.12.17"
 
 /* Reusable versions */
 val sparkVersion = "3.3.2"
-val awsVersion = "1.12.401"
+val awsVersion = "1.12.682"
 val testContainersVersion = "0.40.12"
 
 libraryDependencies ++= Seq(
