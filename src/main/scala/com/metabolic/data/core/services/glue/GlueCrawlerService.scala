@@ -16,8 +16,8 @@ class GlueCrawlerService(implicit val region: Regions) extends Logging {
     .build
 
 
-  def createAndRunCrawler(iam: String, s3Paths: Seq[String], dbName: String, crawlerName: String,
-                                  prefix: String): Unit = {
+  def createAndRunCrawler(iam: String, s3Paths: Seq[String], dbName: String, crawlerName: String, prefix: String): Unit = {
+
     try {
       createCrawler(iam, s3Paths, dbName, crawlerName, prefix)
       runCrawler(crawlerName)
@@ -56,6 +56,7 @@ class GlueCrawlerService(implicit val region: Regions) extends Logging {
 
   private def createCrawler(iam: String, s3Paths: Seq[String], dbName: String, crawlerName: String, prefix: String) = {
 
+
     val s3TargetList = s3Paths
       .map {
         new S3Target().withPath(_)
@@ -80,7 +81,6 @@ class GlueCrawlerService(implicit val region: Regions) extends Logging {
       .withRole(iam)
       .withRecrawlPolicy(recrawlPolicy)
       .withSchemaChangePolicy(schemaChangePolicy)
-      .withTags(Map("Owner" -> "Data",  "Environment" -> environment).asJava)
 
     glueClient.createCrawler(crawlerCreateRequest)
     logger.info(crawlerName + " was successfully created")

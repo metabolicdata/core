@@ -17,7 +17,7 @@ class GlueCrawlerAction extends AfterAction with Logging {
     val options = config.environment
 
     val region = options.region
-    val name = s"${options.name} EM ${config.name}"
+    val crawlerName = s"${options.name} EM ${config.name}"
 
     val dbName = options.dbName
     val iamRole = options.iamRole
@@ -28,11 +28,11 @@ class GlueCrawlerAction extends AfterAction with Logging {
       case sink: FileSink =>
         sink.format match {
           case com.metabolic.data.mapper.domain.io.IOFormat.CSV =>
-            runCrawler(config, options, name, dbName, iamRole, glue, sink)
+            runCrawler(config, options, crawlerName, dbName, iamRole, glue, sink)
           case com.metabolic.data.mapper.domain.io.IOFormat.PARQUET =>
-            runCrawler(config, options, name, dbName, iamRole, glue, sink)
+            runCrawler(config, options, crawlerName, dbName, iamRole, glue, sink)
           case com.metabolic.data.mapper.domain.io.IOFormat.JSON =>
-            runCrawler(config, options, name, dbName, iamRole, glue, sink)
+            runCrawler(config, options, crawlerName, dbName, iamRole, glue, sink)
           case com.metabolic.data.mapper.domain.io.IOFormat.DELTA =>
             logger.warn(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaSink")
           case com.metabolic.data.mapper.domain.io.IOFormat.DELTA_PARTITION =>
@@ -43,17 +43,17 @@ class GlueCrawlerAction extends AfterAction with Logging {
             logger.warn(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaSink")
         }
       case _ =>
-        logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a FileSink")
+        logger.warn(f"After Action: Skipping $crawlerName for ${config.name} as it is not a FileSink")
     }
 
   }
 
-  private def runCrawler(config: Config, options: Environment, name: String, dbName: String, iamRole: String, glue: GlueCrawlerService, sink: FileSink): Unit = {
+  private def runCrawler(config: Config, options: Environment, crawlerName: String, dbName: String, iamRole: String, glue: GlueCrawlerService, sink: FileSink): Unit = {
     val s3Path = sink.path.replaceAll("version=\\d+", "")
     val prefix = ConfigUtilsService.getTablePrefix(options.namespaces, s3Path)
 
     logger.info(f"After Action $name: Running Glue Crawler for ${config.name}")
 
-    glue.createAndRunCrawler(iamRole, Seq(s3Path), dbName, name, prefix)
+    glue.createAndRunCrawler(iamRole, Seq(s3Path), dbName, crawlerName, prefix)
   }
 }
