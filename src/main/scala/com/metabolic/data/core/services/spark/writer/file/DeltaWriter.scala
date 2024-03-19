@@ -146,13 +146,17 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .foreachBatch(appendToDelta _)
           .start
 
-        case WriteMode.Overwrite => df
-          .writeStream
-          .outputMode("complete")
-          .option("overwriteSchema", "true")
-          .option("checkpointLocation", checkpointLocation)
-          .foreachBatch(replaceToDelta _)
-          .start
+        case WriteMode.Overwrite =>
+
+          DeltaTable.forPath(outputPath).delete()
+
+          df
+            .writeStream
+            .outputMode("append")
+            .option("overwriteSchema", "true")
+            .option("checkpointLocation", checkpointLocation)
+            .foreachBatch(appendToDelta _)
+            .start
 
         case WriteMode.Upsert => df
           .writeStream

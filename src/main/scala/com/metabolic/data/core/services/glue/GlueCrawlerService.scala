@@ -15,14 +15,9 @@ class GlueCrawlerService(implicit val region: Regions) extends Logging {
     .withRegion(region)
     .build
 
-  def register(dbName: String, iamRole: String, name: String, s3Paths: Seq[String], prefix: String) = {
 
-    createAndRunCrawler(iamRole, s3Paths, dbName, name, prefix)
-  }
+  def createAndRunCrawler(iam: String, s3Paths: Seq[String], dbName: String, crawlerName: String, prefix: String): Unit = {
 
-
-  private def createAndRunCrawler(iam: String, s3Paths: Seq[String], dbName: String, crawlerName: String,
-                                  prefix: String): Unit = {
     try {
       createCrawler(iam, s3Paths, dbName, crawlerName, prefix)
       runCrawler(crawlerName)
@@ -59,8 +54,8 @@ class GlueCrawlerService(implicit val region: Regions) extends Logging {
     true
   }
 
-
   private def createCrawler(iam: String, s3Paths: Seq[String], dbName: String, crawlerName: String, prefix: String) = {
+
 
     val s3TargetList = s3Paths
       .map {
@@ -70,13 +65,22 @@ class GlueCrawlerService(implicit val region: Regions) extends Logging {
     val targets = new CrawlerTargets()
       .withS3Targets(s3TargetList:_*)
 
+    val recrawlPolicy = new RecrawlPolicy()
+      .withRecrawlBehavior(RecrawlBehavior.CRAWL_NEW_FOLDERS_ONLY)
+
+    val schemaChangePolicy = new SchemaChangePolicy()
+      .withUpdateBehavior(UpdateBehavior.UPDATE_IN_DATABASE)
+      .withDeleteBehavior(DeleteBehavior.DEPRECATE_IN_DATABASE)
+
     val crawlerCreateRequest = new CreateCrawlerRequest()
       .withDatabaseName(dbName)
       .withName(crawlerName)
       .withTablePrefix(prefix)
-      .withDescription("Created by the AWS Glue Java API")
+      .withDescription("Created by Metabolic using the AWS Glue Java API")
       .withTargets(targets)
       .withRole(iam)
+      .withRecrawlPolicy(recrawlPolicy)
+      .withSchemaChangePolicy(schemaChangePolicy)
 
     glueClient.createCrawler(crawlerCreateRequest)
     logger.info(crawlerName + " was successfully created")

@@ -1,0 +1,15 @@
+FruitID,FruitName,SoldQuantity,PricePerUnit,DateSold
+1,Apple,100,0.25,2023-04-01
+2,Banana,150,0.15,2023-04-01
+3,Grape,200,0.05,2023-04-02
+4,Cherry,75,0.30,2023-04-02
+4,Cherry,75,0.30,2023-04-02     # Duplicated row with no change
+5,Orange,50,0.20,2023-04-03
+6,Kiwi,120,0.50,2023-04-03
+7,Mango,85,0.70,2023-04-04
+8,Pineapple,60,0.60,2023-04-04
+9,Strawberry,190,0.25,2023-04-05
+10,Peach,95,0.35,2023-04-05
+1,Apple,120,0.25,2023-04-05     # Updated row with increased SoldQuantity
+4,Cherry,80,0.30,2023-04-06     # Updated row with increased SoldQuantity
+7,Mango,100,0.80,2023-04-06     # Updated row with increased SoldQuantity and PricePerUnit

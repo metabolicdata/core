@@ -199,6 +199,20 @@ When using Airbyte with Datalakes (fileformat) , Airbytes uses structures to man
 
 </details>
 
+### **Watermark Op**
+
+Constraints how further in time a source will be considered.
+
+```hoon
+op.watermark {
+    onColumn: "created_at"
+    value: "60 seconds"
+}
+```
+
+In general used to limit the scope of the source to a certain time window. This is useful for sources that are not append only, like a table that is updated with new data, but also has old data that is not relevant anymore. This is a must in streaming modes especially when joining with other sources so the join window is not too large, and the job runs out of memory waiting for a possible source delay.
+
+
 ## Mapping Operations
 
 Mapping Operations have all the context of the sources and can be exectued before (preOps section) or after (postOps section) the SQL Mapping.

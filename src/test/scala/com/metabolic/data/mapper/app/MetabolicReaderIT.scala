@@ -5,6 +5,7 @@ import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.services.util.ConfigReaderService
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.services.SourceConfigParserService
+import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types._
@@ -17,6 +18,13 @@ class MetabolicReaderIT extends AnyFunSuite
   with SharedSparkContext
   with BeforeAndAfterAll
   with RegionedTest {
+
+  override def conf: SparkConf = super.conf
+    .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+    .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .set("spark.databricks.delta.optimize.repartition.enabled","true")
+    .set("spark.databricks.delta.vacuum.parallelDelete.enabled","true")
+    .set("spark.databricks.delta.retentionDurationCheck.enabled","false")
 
   def getFakeEmployeesDataframe(): DataFrame = {
 
@@ -78,7 +86,7 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val source = getFileSource(inputPath, tableName, IOFormat.PARQUET.toString).head
 
-    MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
+    MetabolicReader.read(source, true, EngineMode.Batch, false, "", "")(spark)
 
     val result = spark.table(tableName)
 
@@ -103,7 +111,7 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val source = getFileSource(inputPath, tableName, IOFormat.JSON.toString).head
 
-    MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
+    MetabolicReader.read(source, true, EngineMode.Batch, false, "", "")(spark)
 
     val result = spark.table(tableName)
 
@@ -129,7 +137,7 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val source = getFileSource(inputPath, tableName, IOFormat.CSV.toString).head
 
-    MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
+    MetabolicReader.read(source, true, EngineMode.Batch, false, "", "")(spark)
 
     val result = spark.table(tableName)
 
@@ -153,7 +161,7 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val source = getFileSource(inputPath, tableName, IOFormat.DELTA.toString).head
 
-    MetabolicReader.read(source, true, EngineMode.Batch, false, "")(spark)
+    MetabolicReader.read(source, historical = true, EngineMode.Batch, enableJDBC = false, "", "")(spark)
 
     val result = spark.table(tableName)
 
