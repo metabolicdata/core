@@ -66,11 +66,11 @@ class GlueCrawlerService(implicit val region: Regions) extends Logging {
       .withS3Targets(s3TargetList:_*)
 
     val recrawlPolicy = new RecrawlPolicy()
-      .withRecrawlBehavior(RecrawlBehavior.CRAWL_NEW_FOLDERS_ONLY)
+      .withRecrawlBehavior(RecrawlBehavior.CRAWL_EVERYTHING)
 
     val schemaChangePolicy = new SchemaChangePolicy()
       .withUpdateBehavior(UpdateBehavior.UPDATE_IN_DATABASE)
-      .withDeleteBehavior(DeleteBehavior.DEPRECATE_IN_DATABASE)
+      .withDeleteBehavior(DeleteBehavior.DELETE_FROM_DATABASE)
 
     val crawlerCreateRequest = new CreateCrawlerRequest()
       .withDatabaseName(dbName)
