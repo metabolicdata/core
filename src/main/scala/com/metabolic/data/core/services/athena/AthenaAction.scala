@@ -15,9 +15,12 @@ class AthenaAction extends AfterAction with Logging {
 
     val options = config.environment
 
+    val s3Path = config.sink.asInstanceOf[FileSink].path
+      .replace("version=1/", "")
     val region = options.region
     val dbName = options.dbName
-    val tableName = ConfigUtilsService.getTableName(config)
+    val prefix = ConfigUtilsService.getTablePrefix(options.namespaces, s3Path)
+    val tableName = prefix+ConfigUtilsService.getTableName(config)
 
     val athena = new AthenaCatalogueService()(region)
 
