@@ -1,14 +1,15 @@
 package com.metabolic.data.mapper.app
 
 import com.amazonaws.regions.Regions
-import com.metabolic.data.core.services.catalogue.AtlanService
-import com.metabolic.data.core.services.glue.{AthenaCatalogueService, GlueCrawlerService}
+import com.metabolic.data.core.services.athena.AthenaAction
+import com.metabolic.data.core.services.catalogue.AtlanCatalogueAction
+import com.metabolic.data.core.services.glue.GlueCrawlerAction
 import com.metabolic.data.core.services.spark.udfs.MetabolicUserDefinedFunction
-import com.metabolic.data.core.services.util.{ConfigReaderService, ConfigUtilsService}
+import com.metabolic.data.core.services.util.ConfigReaderService
 import com.metabolic.data.mapper.domain._
-import com.metabolic.data.mapper.domain.io._
-import com.metabolic.data.mapper.services.ConfigParserService
+import com.metabolic.data.mapper.services.{AfterAction, ConfigParserService}
 import org.apache.logging.log4j.scala.Logging
+import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.io.File
@@ -39,14 +40,18 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       .config("spark.databricks.delta.vacuum.parallelDelete.enabled", "true")
       .getOrCreate()
 
-    spark.sparkContext.setLogLevel("ERROR")
-
     params.get("configJar") match {
       case Some(configJar) => loadUDFs(configJar)
       case None =>
     }
 
-    transformAll(configs)
+    val actions = Seq[AfterAction](
+      new AthenaAction(),
+      new GlueCrawlerAction(),
+      new AtlanCatalogueAction()
+    )
+
+    transformAll(configs, actions)
 
   }
 
@@ -77,25 +82,28 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
   }
 
-  def transformAll(configs: Seq[Config])(implicit region: Regions, spark: SparkSession): Unit = {
+  def transformAll(configs: Seq[Config], withAction: Seq[AfterAction] = Seq.empty[AfterAction])(implicit region: Regions, spark: SparkSession): Unit = {
 
-    configs.foreach { config =>
+    configs.foldLeft(Seq[StreamingQuery]()) { (streamingQueries, config) =>
       before(config)
       logger.info(s"Transforming ${config.name}")
-      transform(config)
+      val streamingQuery = transform(config)
       logger.info(s"Done with ${config.name}")
-      after(config)
+      after(config, withAction)
       logger.info(s"Done registering ${config.name}")
+      streamingQueries ++ streamingQuery
+    }.par.foreach {
+      _.awaitTermination
     }
 
   }
 
   def before(config: Config) = {}
 
-  def transform(mapping: Config)(implicit spark: SparkSession, region: Regions): Unit = {
+  def transform(mapping: Config)(implicit spark: SparkSession, region: Regions): Seq[StreamingQuery] = {
 
     mapping.sources.foreach { source =>
-      MetabolicReader.read(source, mapping.environment.historical, mapping.environment.mode, mapping.environment.enableJDBC, mapping.environment.queryOutputLocation)
+      MetabolicReader.read(source, mapping.environment.historical, mapping.environment.mode, mapping.environment.enableJDBC, mapping.environment.queryOutputLocation, mapping.getCanonicalName)
     }
 
     mapping.mappings.foreach { mapping =>
@@ -104,59 +112,15 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
     val output: DataFrame = spark.table("output")
 
-    val streamingQuery = MetabolicWriter.write(output, mapping.sink, mapping.environment.historical, mapping.environment.autoSchema,
+    MetabolicWriter.write(output, mapping.sink, mapping.environment.historical, mapping.environment.autoSchema,
       mapping.environment.baseCheckpointLocation, mapping.environment.mode, mapping.environment.namespaces)
 
-    streamingQuery.map { _.awaitTermination }
-
   }
 
-  def after(mapping: Config)(implicit region: Regions) = {
-    logger.info(s"Done with ${mapping.name}, registering in Glue Catalog")
-    register(mapping)
+  def after(mapping: Config, actions: Seq[AfterAction])(implicit region: Regions) = {
 
-    if (mapping.sink.isInstanceOf[FileSink]) {
-      logger.info(s"Done with ${mapping.name}, pushing lineage to Atlan")
-      mapping.environment.atlanToken match {
-        case Some(token) => {
-          val atlan = new AtlanService(token, mapping.environment.atlanBaseUrl.getOrElse(""))
-          atlan.setLineage(mapping)
-          atlan.setMetadata(mapping)
-        }
-        case _ => ""
-      }
-    } else {
-      logger.info(s"Done with ${mapping.name}")
-    }
-  }
+    actions.foreach(_.run(mapping))
 
-  def register(config: Config)(implicit region: Regions): Unit = {
-
-    val options = config.environment
-    if (options.crawl && config.sink.isInstanceOf[FileSink]) {
-      val name = s"${options.name} EM ${config.name}"
-      val s3Path = config.sink.asInstanceOf[FileSink].path
-        .replace("version=1/", "")
-
-      val dbName = options.dbName
-      val prefix = ConfigUtilsService.getTablePrefix(options.namespaces, s3Path)
-      val tableName = prefix+ConfigUtilsService.getTableName(config)
-
-      new AthenaCatalogueService().dropView(dbName, tableName)
-
-      config.sink.format match {
-        case IOFormat.DELTA => new AthenaCatalogueService().createDeltaTable(dbName, tableName, s3Path)
-        case _ => new GlueCrawlerService().register(dbName, options.iamRole, name, Seq(s3Path), prefix)
-      }
-//      Schema Separation
-//      if(options.name.contains("production")){
-//        val suffix = ConfigUtilsService.getTableSuffix(options.namespaces, s3Path)
-//        config.sink.format match {
-//          case IOFormat.DELTA => new AthenaCatalogueService().createDeltaTable(options.dbName+suffix, ConfigUtilsService.getTableName(config), s3Path)
-//          case _ => new GlueCrawlerService().register(options.dbName+suffix, options.iamRole, name+" "+options.dbName+suffix, Seq(s3Path), "")
-//        }
-//      }
-    }
   }
 
 }

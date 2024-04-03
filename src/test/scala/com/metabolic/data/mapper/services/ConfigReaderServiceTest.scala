@@ -158,7 +158,7 @@ class ConfigReaderServiceTest extends AnyFunSuite with RegionedTest  {
   test("ConfigReaderService resolves a variable in map ") {
 
     val args: Map[String, String] = Map(
-      "dp.region" -> "eu-west-4",
+      "dp.region" -> "eu-west-1",
       "dp.raw_bucket" -> "s3://factorial-dl-rawy",
       "dp.time" -> "2021-01-01T00:00:00"
     )
@@ -172,7 +172,7 @@ class ConfigReaderServiceTest extends AnyFunSuite with RegionedTest  {
   test("ConfigReaderService resolves a preload in a map") {
 
     val args: Map[String, String] = Map(
-      "dp.region" -> "eu-west-4",
+      "dp.region" -> "eu-west-1",
       "dp.raw_bucket" -> "s3://factorial-dl-rawy",
       "dp.time" -> "df.now"
     )

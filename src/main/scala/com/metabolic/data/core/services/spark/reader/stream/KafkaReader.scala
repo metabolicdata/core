@@ -6,7 +6,7 @@ import org.apache.spark.sql.streaming.DataStreamReader
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 
-class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String,
+class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, consumerGroup: String = "spark",
                   schemaRegistryUrl: String, srApiKey: String, srApiSecret: String, schemaRegistry: Option[String])
   extends DataframeUnifiedReader {
 
@@ -67,6 +67,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .option("kafka.session.timeout.ms", 45000)
       .option("kafka.client.dns.lookup","use_all_dns_ips")
       .option("startingOffsets", "latest")
+      .option("groupIdPrefix",s"metabolic-stream-${consumerGroup}")
       .option("failOnDataLoss", false)
 
 
@@ -84,6 +85,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .format("kafka")
       .option("kafka.bootstrap.servers", servers.mkString(","))
       .option("subscribe", topic)
+      .option("groupIdPrefix",s"metabolic-batch-${consumerGroup}")
       .option("startingOffsets", "earliest")
       .option("endingOffsets", "latest")
 

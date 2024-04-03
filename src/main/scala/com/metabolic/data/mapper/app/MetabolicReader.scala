@@ -14,9 +14,9 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object MetabolicReader extends Logging {
 
- def read(source: Source, historical: Boolean, mode: EngineMode, enableJDBC: Boolean, queryOutputLocation: String)(implicit spark: SparkSession) = {
+ def read(source: Source, historical: Boolean, mode: EngineMode, enableJDBC: Boolean, queryOutputLocation: String, jobName: String)(implicit spark: SparkSession) = {
 
-  val input = readSource(source, mode, spark, enableJDBC, queryOutputLocation)
+  val input = readSource(source, mode, spark, enableJDBC, queryOutputLocation, jobName)
 
   val prepared = prepareSource(source, historical, input)
 
@@ -24,15 +24,15 @@ object MetabolicReader extends Logging {
 
  }
 
- private def readSource(source: Source, mode: EngineMode, spark: SparkSession, enableJDBC: Boolean, queryOutputLocation: String) = {
+ private def readSource(source: Source, mode: EngineMode, spark: SparkSession, enableJDBC: Boolean, queryOutputLocation: String, jobName: String) = {
   source match {
 
    case streamSource: StreamSource => {
     logger.info(s"Reading stream source ${streamSource.name} from ${streamSource.topic}")
 
     streamSource.format match {
-     case IOFormat.KAFKA => new KafkaReader(streamSource.servers, streamSource.key, streamSource.secret, streamSource.topic,
-      streamSource.schemaRegistryUrl, streamSource.srApiKey,
+     case IOFormat.KAFKA => new KafkaReader(streamSource.servers, streamSource.key, streamSource.secret, streamSource.topic, jobName,
+     streamSource.schemaRegistryUrl, streamSource.srApiKey,
       streamSource.srApiSecret, streamSource.schemaRegistry)
        .read(spark, mode)
     }

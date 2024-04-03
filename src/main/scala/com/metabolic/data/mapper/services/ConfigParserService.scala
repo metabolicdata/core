@@ -98,7 +98,13 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       ""
     }
 
-    Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, atlanToken, atlanBaseUrl,historical, autoSchema, namespaces, infix_namespaces, enableJDBC, queryOutputLocation)
+    val region = if (config.hasPathOrNull("region")) {
+      Regions.fromName(config.getString("region"))
+    } else {
+      Regions.fromName("eu-central-1")
+    }
+
+    Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, region, atlanToken, atlanBaseUrl,historical, autoSchema, namespaces, infix_namespaces, enableJDBC, queryOutputLocation)
   }
 
   private def parseDefaults(config: HoconConfig) = {
