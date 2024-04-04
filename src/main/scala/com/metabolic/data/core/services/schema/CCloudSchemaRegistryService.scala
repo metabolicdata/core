@@ -31,8 +31,6 @@ class CCloudSchemaRegistryService(schemaRegistryUrl: String, srApiKey: String, s
 
   // UDF function
   private val binaryToStringUDF = udf((x: Array[Byte]) => BigInt(x).toString())
-  // x->value, y->len
-  private val intToBinaryUDF = udf((value: Long, byteSize: Int) => BigInt(value).toByteArray.takeRight(byteSize))
 
   def deserializeWithAbris(topic: String, df: DataFrame): DataFrame = {
     // Get latest schema
