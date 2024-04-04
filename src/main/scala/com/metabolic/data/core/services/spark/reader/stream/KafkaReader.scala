@@ -98,7 +98,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
   private def deserialize(input: DataFrame): DataFrame = {
     schemaRegistry match {
       case Some("avro") => {
-        new CCloudSchemaRegistryService(schemaRegistryUrl, srApiKey, srApiSecret).deserializeWithAbris(topic, input)
+        new CCloudSchemaRegistryService(schemaRegistryUrl, srApiKey, srApiSecret).deserialize(topic, input)
       }
       case _ => {
         input.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")

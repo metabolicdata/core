@@ -1,24 +1,18 @@
 package com.metabolic.data.core.services.schema
 
-import com.amazonaws.services.glue.model.AlreadyExistsException
 import io.confluent.kafka.schemaregistry.avro.AvroSchema
-import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient
-import io.confluent.kafka.schemaregistry.client.rest.RestService
 import org.apache.logging.log4j.scala.Logging
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.avro.SchemaConverters
-import org.apache.spark.sql.types.{BinaryType, DataType, StringType}
-import org.apache.spark.sql.{DataFrame, functions}
 import org.apache.spark.sql.avro.functions.{from_avro, to_avro}
-import org.apache.spark.sql.functions.{col, expr, lit, struct, udf}
+import org.apache.spark.sql.functions.{col, expr, struct, udf}
 import org.json.JSONObject
+import scalaj.http.{Http, HttpResponse}
 
 import java.nio.ByteBuffer
 import java.util
-import scala.collection.JavaConverters._
-import scalaj.http.{Http, HttpResponse}
-
 import java.util.Base64
-import scala.compat.java8.JFunction.func
+import scala.collection.JavaConverters._
 class CCloudSchemaRegistryService(schemaRegistryUrl: String, srApiKey: String, srApiSecret: String) extends Logging {
 
   private val props: util.Map[String, String] = Map(
@@ -26,13 +20,10 @@ class CCloudSchemaRegistryService(schemaRegistryUrl: String, srApiKey: String, s
     "schema.registry.basic.auth.user.info" -> s"$srApiKey:$srApiSecret"
   ).asJava
 
-
-  private val schemaRegistryClient = new CachedSchemaRegistryClient(new RestService(schemaRegistryUrl), 100, props)
-
   // UDF function
   private val binaryToStringUDF = udf((x: Array[Byte]) => BigInt(x).toString())
 
-  def deserializeWithAbris(topic: String, df: DataFrame): DataFrame = {
+  def deserialize(topic: String, df: DataFrame): DataFrame = {
     // Get latest schema
     val avroSchema = getLastSchemaVersion(topic + "-value")
 
@@ -78,7 +69,7 @@ class CCloudSchemaRegistryService(schemaRegistryUrl: String, srApiKey: String, s
 
   }
 
-  def register(subject: String, schema: String): Option[Int] = {
+  private def register(subject: String, schema: String): Option[Int] = {
     val body = schema
     val request = s"$schemaRegistryUrl/subjects/$subject/versions"
     logger.info(s"Register schema for subject $subject")
@@ -99,16 +90,16 @@ class CCloudSchemaRegistryService(schemaRegistryUrl: String, srApiKey: String, s
         Some(id)
       } else {
         logger.info(s"Error registering subject $subject: ${httpResponse.code} ${httpResponse.body}")
-        None
+        throw new RuntimeException(s"Error registering subject $subject: ${httpResponse.code} ${httpResponse.body}")
       }
     } catch {
       case e: Exception =>
         logger.info("Error in registering schema: " + e.getMessage)
-        None
+        throw e
     }
   }
 
-  def getLastSchemaVersion(subject: String): Option[String] = {
+  private def getLastSchemaVersion(subject: String): Option[String] = {
     val request = s"$schemaRegistryUrl/subjects/$subject/versions/latest"
     logger.info(s"Getting schema for subject $subject")
     val credentials = s"$srApiKey:$srApiSecret"
@@ -125,12 +116,12 @@ class CCloudSchemaRegistryService(schemaRegistryUrl: String, srApiKey: String, s
         Some(schema)
       } else {
         logger.info(s"Error getting subject $subject: ${httpResponse.code} ${httpResponse.body}")
-        None
+        throw new RuntimeException(s"Error registering subject $subject: ${httpResponse.code} ${httpResponse.body}")
       }
     } catch {
       case e: Exception =>
         logger.info("Error in getting schema: " + e.getMessage)
-        None
+        throw e
     }
   }
 }
