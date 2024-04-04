@@ -307,3 +307,10 @@ gradle-app.setting
 terraform/.terraform
 
 old_envs/*
+
+.bloop/
+.metals/
+.vscode/
+project/.bloop/
+project/metals.sbt
+project/project/

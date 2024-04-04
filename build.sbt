@@ -12,6 +12,7 @@ val confluentVersion = "7.2.3"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
+  "org.apache.spark" %% "spark-avro" % sparkVersion,
   "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
   "org.apache.kafka" % "kafka-clients" % "3.3.2",
 

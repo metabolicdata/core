@@ -6,8 +6,8 @@ import org.apache.spark.sql.streaming.DataStreamReader
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 
-class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, consumerGroup: String = "spark",
-                  schemaRegistryUrl: String, srApiKey: String, srApiSecret: String, schemaRegistry: Option[String])
+class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, 
+                  schemaRegistryUrl: String, srApiKey: String, srApiSecret: String, schemaRegistry: Option[String], consumerGroup: String = "spark")
   extends DataframeUnifiedReader {
 
   override val input_identifier: String = topic
@@ -110,6 +110,6 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
 
 object KafkaReader {
   def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String, schemaRegistryUrl: String,
-            srApiKey: String, srApiSecret: String, serialization: Option[String]) =
-    new KafkaReader(servers, apiKey, apiSecret, topic, schemaRegistryUrl, srApiKey, srApiSecret, serialization)
+            srApiKey: String, srApiSecret: String, schemaRegistry: Option[String]) =
+    new KafkaReader(servers, apiKey, apiSecret, topic, schemaRegistryUrl, srApiKey, srApiSecret, schemaRegistry)
 }

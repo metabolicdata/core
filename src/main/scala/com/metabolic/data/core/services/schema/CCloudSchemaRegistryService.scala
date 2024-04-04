@@ -10,7 +10,6 @@ import za.co.absa.abris.avro.parsing.utils.AvroSchemaUtils
 import za.co.absa.abris.avro.read.confluent.SchemaManagerFactory
 import za.co.absa.abris.avro.registry.SchemaSubject
 import za.co.absa.abris.config.{AbrisConfig, FromAvroConfig, ToAvroConfig}
-import okhttp3._
 
 import java.io.IOException
 import org.apache.avro.Schema
@@ -44,17 +43,12 @@ class CCloudSchemaRegistryService(schemaRegistryUrl: String, srApiKey: String, s
 
 
   def serializeWithAbris(topic: String, df: DataFrame): DataFrame = {
-    val schemaManager = SchemaManagerFactory.create(registryConfig)
-
-    // register schema with topic name strategy
-    val subject = SchemaSubject.usingTopicNameStrategy(topic, isKey = false) // Use isKey=true for the key schema and isKey=false for the value schema=
-    schemaManager.register(subject, AvroSchemaUtils.toAvroSchema(df))
 
 
     val toAvroConfigValue: ToAvroConfig = AbrisConfig
       .toConfluentAvro
-      .downloadSchemaByLatestVersion
-      .andTopicNameStrategy(topic)
+      .provideAndRegisterSchema(AvroSchemaUtils.toAvroSchema(df).toString())
+      .usingTopicNameStrategy(topic)
       .usingSchemaRegistry(registryConfig)
 
     val allColumns = struct(df.columns.head, df.columns.tail: _*)

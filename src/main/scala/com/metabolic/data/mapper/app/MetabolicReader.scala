@@ -31,9 +31,9 @@ object MetabolicReader extends Logging {
     logger.info(s"Reading stream source ${streamSource.name} from ${streamSource.topic}")
 
     streamSource.format match {
-     case IOFormat.KAFKA => new KafkaReader(streamSource.servers, streamSource.key, streamSource.secret, streamSource.topic, jobName,
+     case IOFormat.KAFKA => new KafkaReader(streamSource.servers, streamSource.key, streamSource.secret, streamSource.topic,
      streamSource.schemaRegistryUrl, streamSource.srApiKey,
-      streamSource.srApiSecret, streamSource.schemaRegistry)
+      streamSource.srApiSecret, streamSource.schemaRegistry, jobName)
        .read(spark, mode)
     }
    }
