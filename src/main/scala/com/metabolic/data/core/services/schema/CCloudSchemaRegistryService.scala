@@ -1,93 +1,139 @@
 package com.metabolic.data.core.services.schema
 
-import com.metabolic.data.core.services.catalogue.HttpRequestHandler
-import com.metabolic.data.core.services.catalogue.HttpRequestHandler.logger
+import com.amazonaws.services.glue.model.AlreadyExistsException
+import io.confluent.kafka.schemaregistry.avro.AvroSchema
+import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient
+import io.confluent.kafka.schemaregistry.client.rest.RestService
 import org.apache.logging.log4j.scala.Logging
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.{col, struct}
-import za.co.absa.abris.avro.functions.{from_avro, to_avro}
-import za.co.absa.abris.avro.parsing.utils.AvroSchemaUtils
-import za.co.absa.abris.avro.read.confluent.SchemaManagerFactory
-import za.co.absa.abris.avro.registry.SchemaSubject
-import za.co.absa.abris.config.{AbrisConfig, FromAvroConfig, ToAvroConfig}
+import org.apache.spark.sql.avro.SchemaConverters
+import org.apache.spark.sql.types.{BinaryType, DataType, StringType}
+import org.apache.spark.sql.{DataFrame, functions}
+import org.apache.spark.sql.avro.functions.{from_avro, to_avro}
+import org.apache.spark.sql.functions.{col, expr, lit, struct, udf}
+import org.json.JSONObject
 
-import java.io.IOException
-import org.apache.avro.Schema
+import java.nio.ByteBuffer
+import java.util
+import scala.collection.JavaConverters._
 import scalaj.http.{Http, HttpResponse}
 
+import java.util.Base64
+import scala.compat.java8.JFunction.func
 class CCloudSchemaRegistryService(schemaRegistryUrl: String, srApiKey: String, srApiSecret: String) extends Logging {
 
-  private val registryConfig = Map(
-    AbrisConfig.SCHEMA_REGISTRY_URL -> schemaRegistryUrl,
+  private val props: util.Map[String, String] = Map(
     "basic.auth.credentials.source" -> "USER_INFO",
-    "basic.auth.user.info" -> s"$srApiKey:$srApiSecret"
-  )
+    "schema.registry.basic.auth.user.info" -> s"$srApiKey:$srApiSecret"
+  ).asJava
+
+
+  private val schemaRegistryClient = new CachedSchemaRegistryClient(new RestService(schemaRegistryUrl), 100, props)
+
+  // UDF function
+  private val binaryToStringUDF = udf((x: Array[Byte]) => BigInt(x).toString())
+  // x->value, y->len
+  private val intToBinaryUDF = udf((value: Long, byteSize: Int) => BigInt(value).toByteArray.takeRight(byteSize))
 
   def deserializeWithAbris(topic: String, df: DataFrame): DataFrame = {
-    val fromAvroConfigKey: FromAvroConfig = AbrisConfig
-      .fromConfluentAvro
-      .downloadReaderSchemaByLatestVersion
-      .andTopicNameStrategy(topic, isKey = true)
-      .usingSchemaRegistry(registryConfig)
+    // Get latest schema
+    val avroSchema = getLastSchemaVersion(topic + "-value")
 
-    val fromAvroConfigValue: FromAvroConfig = AbrisConfig
-      .fromConfluentAvro
-      .downloadReaderSchemaByLatestVersion
-      .andTopicNameStrategy(topic, isKey = false)
-      .usingSchemaRegistry(registryConfig)
+    // Remove first 5 bytes from value
+    val dfFixed = df.withColumn("fixedValue", expr("substring(value, 6)"))
 
+    // Get schema id from value
+    val dfFixedId = dfFixed.withColumn("valueSchemaId", binaryToStringUDF(expr("value")))
 
-    df
-      .select(from_avro(col("key"), fromAvroConfigKey).as("key"), from_avro(col("value"), fromAvroConfigValue).as("value"))
+    // Deserialize data
+    val decoded_output = dfFixedId.select(
+      from_avro(col("fixedValue"), avroSchema.get)
+        .alias("value")
+    )
+    decoded_output.select("value.*")
   }
 
 
-  def serializeWithAbris(topic: String, df: DataFrame): DataFrame = {
+  def serialize(topic: String, df: DataFrame): DataFrame = {
+
+    val schemaAvro = new AvroSchema(SchemaConverters.toAvroType(df.schema, recordName = "Envelope", nameSpace = topic))
+    val schemaId = register(topic + "-value", schemaAvro.toString)
 
 
-    val toAvroConfigValue: ToAvroConfig = AbrisConfig
-      .toConfluentAvro
-      .provideAndRegisterSchema(AvroSchemaUtils.toAvroSchema(df).toString())
-      .usingTopicNameStrategy(topic)
-      .usingSchemaRegistry(registryConfig)
+    // Serialize data to Avro format
+    val serializedDF = df.select(to_avro(struct(df.columns.map(col): _*), schemaAvro.toString).alias("value"))
 
-    val allColumns = struct(df.columns.head, df.columns.tail: _*)
+    // Add magic byte & schema id to the serialized data
+    val addHeaderUDF = udf { (value: Array[Byte]) =>
+      val magicByte: Byte = 0x0 // Assuming no magic byte is used
+      val idBytes: Array[Byte] = ByteBuffer.allocate(4).putInt(schemaId.get).array()
+      ByteBuffer.allocate(1 + idBytes.length + value.length)
+        .put(magicByte)
+        .put(idBytes)
+        .put(value)
+        .array()
+    }
 
-    df.select(to_avro(allColumns, toAvroConfigValue) as 'value)
+    // Apply the UDF to add header to each row
+    val finalDF = serializedDF.withColumn("value", addHeaderUDF(col("value")))
 
+    finalDF
 
   }
 
-
-
-  def register(subject: String, schema: Schema) {
-
-    val body = schema.toString()
+  def register(subject: String, schema: String): Option[Int] = {
+    val body = schema
     val request = s"$schemaRegistryUrl/subjects/$subject/versions"
-
     logger.info(s"Register schema for subject $subject")
+    val credentials = s"$srApiKey:$srApiSecret"
+    val base64Credentials = Base64.getEncoder.encodeToString(credentials.getBytes("utf-8"))
 
     try {
       val httpResponse: HttpResponse[String] = Http(request)
         .header("content-type", "application/octet-stream")
-        .header("Authorization", s"Basic $srApiKey:$srApiSecret")
+        .header("Authorization", s"Basic $base64Credentials")
         .postData(body.getBytes)
         .asString
 
-      val response = if (httpResponse.code == 200) httpResponse.body
-      else {
-        logger.info(s"Error registering subject $subject:  + ${httpResponse.code}  ${httpResponse.body}")
+      if (httpResponse.code == 200) {
+        val jsonResponse = new JSONObject(httpResponse.body)
+        val id = jsonResponse.getInt("id")
+        logger.info(s"Schema registered for subject $subject with id: $id")
+        Some(id)
+      } else {
+        logger.info(s"Error registering subject $subject: ${httpResponse.code} ${httpResponse.body}")
+        None
       }
-
-      logger.info(s"Schema registered for subject $subject")
-
-
-
-
     } catch {
-      case e: Exception => logger.info("Error in registering schema: " + e.getMessage)
+      case e: Exception =>
+        logger.info("Error in registering schema: " + e.getMessage)
+        None
     }
   }
 
+  def getLastSchemaVersion(subject: String): Option[String] = {
+    val request = s"$schemaRegistryUrl/subjects/$subject/versions/latest"
+    logger.info(s"Getting schema for subject $subject")
+    val credentials = s"$srApiKey:$srApiSecret"
+    val base64Credentials = Base64.getEncoder.encodeToString(credentials.getBytes("utf-8"))
+
+    try {
+      val httpResponse: HttpResponse[String] = Http(request)
+        .header("Authorization", s"Basic $base64Credentials")
+        .asString
+
+      if (httpResponse.code == 200) {
+        val jsonResponse = new JSONObject(httpResponse.body)
+        val schema = jsonResponse.getString("schema")
+        Some(schema)
+      } else {
+        logger.info(s"Error getting subject $subject: ${httpResponse.code} ${httpResponse.body}")
+        None
+      }
+    } catch {
+      case e: Exception =>
+        logger.info("Error in getting schema: " + e.getMessage)
+        None
+    }
+  }
 }
 

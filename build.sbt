@@ -45,7 +45,12 @@ libraryDependencies += "com.amazonaws" % "AWSGlueETL" % "1.0.0" % Provided
 resolvers +="confluent" at "https://packages.confluent.io/maven/"
 
 libraryDependencies ++= Seq(
-  "za.co.absa" %% "abris" % "6.4.0"
+  ("io.confluent" % "kafka-avro-serializer" % confluentVersion)
+    .exclude("com.fasterxml.jackson.module","jackson-module-scala_2.13")
+    .exclude("org.scala-lang.modules", "scala-collection-compat_2.13"),
+  ("io.confluent" % "kafka-schema-registry" % confluentVersion)
+    .exclude("com.fasterxml.jackson.module", "jackson-module-scala_2.13")
+    .exclude("org.scala-lang.modules", "scala-collection-compat_2.13")
 )
 
 assembly / assemblyMergeStrategy := {

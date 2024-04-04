@@ -20,7 +20,7 @@ class KafkaWriter(servers: Seq[String], apiKey: String, apiSecret: String, topic
 
     val kafkaDf = schemaRegistry match {
       case Some("avro") =>
-        new CCloudSchemaRegistryService(schemaRegistryUrl, srApiKey, srApiSecret).serializeWithAbris(output_identifier, df)
+        new CCloudSchemaRegistryService(schemaRegistryUrl, srApiKey, srApiSecret).serialize(output_identifier, df)
       case _ => {
         idColumnName match {
           case Some(c) => df.selectExpr(s"$c as key", "to_json(struct(*)) as value")
@@ -49,7 +49,7 @@ class KafkaWriter(servers: Seq[String], apiKey: String, apiSecret: String, topic
 
     val kafkaDf = schemaRegistry match {
       case Some("avro") =>
-        new CCloudSchemaRegistryService(schemaRegistryUrl, srApiKey, srApiSecret).serializeWithAbris(output_identifier, df)
+        new CCloudSchemaRegistryService(schemaRegistryUrl, srApiKey, srApiSecret).serialize(output_identifier, df)
       case _ => {
         idColumnName match {
           case Some(c) => df.selectExpr(s"$c as key", "to_json(struct(*)) as value")
