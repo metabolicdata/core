@@ -15,10 +15,8 @@ class AthenaAction extends AfterAction with Logging {
 
     val options = config.environment
 
-
     val region = options.region
     val dbName = options.dbName
-
 
     val athena = new AthenaCatalogueService()(region)
 
@@ -26,19 +24,25 @@ class AthenaAction extends AfterAction with Logging {
       case sink: FileSink =>
         sink.format match {
           case IOFormat.DELTA =>
-
-            logger.info(f"After Action $name: Creating Delta Table for ${config.name}")
+            logger.info(
+              f"After Action $name: Creating Delta Table for ${config.name}"
+            )
             val s3Path = sink.path.replaceAll("version=\\d+", "")
-            val prefix = ConfigUtilsService.getTablePrefix(options.namespaces, s3Path)
+            val prefix =
+              ConfigUtilsService.getTablePrefix(options.namespaces, s3Path)
             val tableName = prefix + ConfigUtilsService.getTableName(config)
             athena.dropView(dbName, tableName)
             athena.createDeltaTable(dbName, tableName, s3Path)
 
           case _ =>
-            logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a DeltaSink")
+            logger.warn(
+              f"After Action: Skipping $name for ${config.name} as it is not a DeltaSink"
+            )
         }
       case _ =>
-        logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a FileSink")
+        logger.warn(
+          f"After Action: Skipping $name for ${config.name} as it is not a FileSink"
+        )
     }
 
   }
