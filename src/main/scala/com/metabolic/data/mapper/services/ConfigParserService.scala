@@ -64,10 +64,12 @@ class ConfigParserService(implicit region: Regions) extends Logging {
     }
 
     val namespaces = if (config.hasPathOrNull("namespaces")){
+      logger.info("Parsing namespaces")
       config.getString("namespaces").split(",").toSeq
     } else {
       Seq.empty
     }
+    logger.info(f"Namespaces: $namespaces")
 
     val infix_namespaces = if (config.hasPathOrNull("infix_namespaces")) {
       config.getString("infix_namespaces").split(",").toSeq
@@ -93,9 +95,9 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       Regions.fromName("eu-central-1")
     }
 
-    var atlanToken: Option[String] = None
-    var atlanBaseUrlDataLake: Option[String] = None
-    var atlanBaseUrlConfluent: Option[String] = None
+    var atlanToken: Option[String] = Option.empty
+    var atlanBaseUrlDataLake: Option[String] = Option.empty
+    var atlanBaseUrlConfluent: Option[String] = Option.empty
 
     val atlan = if (config.hasPathOrNull("atlan")){
       Option.apply(config.getString("atlan"))
