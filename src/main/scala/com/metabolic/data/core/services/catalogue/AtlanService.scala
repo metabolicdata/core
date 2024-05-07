@@ -107,9 +107,8 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
          |            "uniqueAttributes": {
          |              "qualifiedName": "${qualifiedName}"
          |            }
-         |          }
-         |""".stripMargin
-    }.mkString(",")
+         |          }"""
+    }.mkString(",").stripMargin
 
     s"""
        |{

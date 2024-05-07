@@ -57,10 +57,6 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       EngineMode.Batch
     }
 
-    var atlanToken: Option[String] = None
-    var atlanBaseUrlDataLake: Option[String] = None
-    var atlanBaseUrlConfluent: Option[String] = None
-
     val autoSchema = if (config.hasPathOrNull("autoSchema")){
       config.getBoolean("autoSchema")
     } else {
@@ -97,13 +93,16 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       Regions.fromName("eu-central-1")
     }
 
+    var atlanToken: Option[String] = None
+    var atlanBaseUrlDataLake: Option[String] = None
+    var atlanBaseUrlConfluent: Option[String] = None
 
     val atlan = if (config.hasPathOrNull("atlan")){
       Option.apply(config.getString("atlan"))
     } else {
       Option.empty
     }
-    if (atlan.isDefined) {
+    if (atlan.isDefined && atlan.get.nonEmpty) {
 
       val secrets = new SecretsManagerService()(region)
       val kafkaSecretValue = secrets.get(atlan.get)
