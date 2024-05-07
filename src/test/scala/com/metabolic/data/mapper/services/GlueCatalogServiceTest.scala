@@ -13,7 +13,7 @@ class GlueCatalogServiceTest extends AnyFunSuite
   ignore("Works") {
 
     val s3Path = Seq("s3://factorial-etl/entity_mapper/dl/clean/subs/")
-    val config = Environment("[Test] ", EngineMode.Batch, "", true, "test_data_lake", "AWSGlueServiceRoleDefault", region, Option.apply("fooBarAtlan"), Option.apply("fooBarAtlan"))
+    val config = Environment("[Test] ", EngineMode.Batch, "", true, "test_data_lake", "AWSGlueServiceRoleDefault", region, Option.apply("fooBarAtlan"), Option.apply("fooBarAtlan"), Option.apply("fooBarAtlan"))
 
     //GlueCatalogService.register(config, "subsy", s3Path, "clean_")
 

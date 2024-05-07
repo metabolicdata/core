@@ -52,7 +52,7 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
 
     val expectedJson =
@@ -104,14 +104,14 @@ class AtlanServiceTest extends AnyFunSuite
         |  ]
         |}""".stripMargin
 
-    val calculatedJson = new AtlanService("foo", "foo")
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
       .generateBodyJson(testingConfig)
     print(calculatedJson)
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }
 
   test("Test fake asset GUI - should not stop execution") {
-    val response = new AtlanService("foo", "foo")
+    val response = new AtlanService("foo", "foo", "foo")
       .getGUI("test")
     assert(response.trim.equalsIgnoreCase(""))
   }
@@ -123,9 +123,9 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""),Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""),Option(""),  Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
-    val calculatedJson = new AtlanService("foo", "foo")
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
       .generateMetadaBody(testingConfig)
 
     val expectedJson =

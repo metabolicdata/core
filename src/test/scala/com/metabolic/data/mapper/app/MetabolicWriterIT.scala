@@ -88,7 +88,7 @@ class MetabolicWriterIT extends AnyFunSuite
       .loadConfig(genericSourceHOCON, "")
 
     SinkConfigParserService()
-      .parseSink(fileSinkConfig, Environment("",EngineMode.Batch, "", false,"dbName","", region, Option.empty, Option.empty, false, autoSchema = true))
+      .parseSink(fileSinkConfig, Environment("",EngineMode.Batch, "", false,"dbName","", region, Option.empty, Option.empty, Option.empty, autoSchema = true))
 
   }
 
