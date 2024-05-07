@@ -95,9 +95,9 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       Regions.fromName("eu-central-1")
     }
 
-    var atlanToken: Option[String] = Option.empty
-    var atlanBaseUrlDataLake: Option[String] = Option.empty
-    var atlanBaseUrlConfluent: Option[String] = Option.empty
+    var atlanToken: Option[String] = None
+    var atlanBaseUrlDataLake: Option[String] = None
+    var atlanBaseUrlConfluent: Option[String] = None
 
     val atlan = if (config.hasPathOrNull("atlan")){
       Option.apply(config.getString("atlan"))

@@ -13,14 +13,15 @@ class AtlanCatalogueAction extends AfterAction with Logging {
 
     config.environment.atlanToken match {
       case Some(token) =>
-        if (config.environment.atlanBaseUrlDataLake.isDefined && config.environment.atlanBaseUrlConfluent.isDefined) {
-          val atlan = new AtlanService(token, config.environment.atlanBaseUrlDataLake.get, config.environment.atlanBaseUrlConfluent.get)
-          atlan.setLineage(config)
-          atlan.setMetadata(config)
-          logger.info(s"After Action $name: Pushed lineage generated in ${config.name} to Atlan")
+        (config.environment.atlanBaseUrlDataLake, config.environment.atlanBaseUrlConfluent) match {
+          case (Some(_), Some(_)) =>
+            val atlan = new AtlanService(token, config.environment.atlanBaseUrlDataLake.get, config.environment.atlanBaseUrlConfluent.get)
+            atlan.setLineage(config)
+            atlan.setMetadata(config)
+            logger.info(s"After Action $name: Pushed lineage generated in ${config.name} to Atlan")
+          case _ =>
+            logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Url is not provided")
         }
-        else
-          logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Url is not provided")
       case None =>
         logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Token is not provided")
     }
