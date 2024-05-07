@@ -52,7 +52,7 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
 
     val expectedJson =
@@ -68,7 +68,7 @@ class AtlanServiceTest extends AnyFunSuite
         |        "connectionQualifiedName": "fo"
         |      },
         |      "relationshipAttributes": {
-        |      "outputs": [
+        |        "outputs": [
         |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
@@ -77,22 +77,26 @@ class AtlanServiceTest extends AnyFunSuite
         |          }
         |        ],
         |        "inputs": [
+        |
         |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
         |              "qualifiedName": "footest/raw_stripe_fake_employee"
         |            }
-        |          },          {
+        |          },
+        |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
         |              "qualifiedName": "footest/clean_fake_employee_s"
         |            }
-        |          },          {
+        |          },
+        |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
         |              "qualifiedName": "footest/raw_hubspot_owners"
         |            }
-        |          },          {
+        |          },
+        |          {
         |            "typeName": "Table",
         |            "uniqueAttributes": {
         |              "qualifiedName": "footest/clean_hubspot_owners"
@@ -104,14 +108,90 @@ class AtlanServiceTest extends AnyFunSuite
         |  ]
         |}""".stripMargin
 
-    val calculatedJson = new AtlanService("foo", "foo")
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
+      .generateBodyJson(testingConfig)
+    print(calculatedJson)
+    assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
+  }
+
+  test("Test generated json for lineage Confluent") {
+
+    val testingConfig = Config(
+      "",
+      List(io.StreamSource("Name test",Seq("test"), "test", "test", "topic1", IOFormat.KAFKA), io.FileSource("raw/stripe/fake_employee/version=3/", "employees", IOFormat.PARQUET), io.FileSource("clean/fake_employee_s/version=123/", "employeesss", IOFormat.PARQUET), io.FileSource("raw/hubspot/owners/", "owners", IOFormat.PARQUET), io.FileSource("clean/hubspot_owners/", "clean_owners", IOFormat.PARQUET)),
+      List(new SQLFileMapping("src/test/resources/simple.sql", region)),
+      io.StreamSink("Name test",Seq("test"), "test", "test", "topic2", Option.empty, IOFormat.KAFKA, Seq.empty),
+      Defaults(ConfigFactory.load()),
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+    )
+
+    val expectedJson =
+      """{
+        |  "entities": [
+        |    {
+        |      "typeName": "Process",
+        |      "attributes": {
+        |        "name": "topic1,test/raw_stripe_fake_employee,test/clean_fake_employee_s,test/raw_hubspot_owners,test/clean_hubspot_owners -> topic2",
+        |        "qualifiedName": "fooc2875cff74a12d49ebaa2c5f82228063",
+        |        "connectorName": "confluent-kafka",
+        |        "connectionName": "production",
+        |        "connectionQualifiedName": "fo"
+        |      },
+        |      "relationshipAttributes": {
+        |        "outputs": [
+        |          {
+        |            "typeName": "KafkaTopic",
+        |            "uniqueAttributes": {
+        |              "qualifiedName": "footopic2"
+        |            }
+        |          }
+        |        ],
+        |        "inputs": [
+        |
+        |          {
+        |            "typeName": "KafkaTopic",
+        |            "uniqueAttributes": {
+        |              "qualifiedName": "footopic1"
+        |            }
+        |          },
+        |          {
+        |            "typeName": "Table",
+        |            "uniqueAttributes": {
+        |              "qualifiedName": "footest/raw_stripe_fake_employee"
+        |            }
+        |          },
+        |          {
+        |            "typeName": "Table",
+        |            "uniqueAttributes": {
+        |              "qualifiedName": "footest/clean_fake_employee_s"
+        |            }
+        |          },
+        |          {
+        |            "typeName": "Table",
+        |            "uniqueAttributes": {
+        |              "qualifiedName": "footest/raw_hubspot_owners"
+        |            }
+        |          },
+        |          {
+        |            "typeName": "Table",
+        |            "uniqueAttributes": {
+        |              "qualifiedName": "footest/clean_hubspot_owners"
+        |            }
+        |          }
+        |        ]
+        |      }
+        |    }
+        |  ]
+        |}""".stripMargin
+
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
       .generateBodyJson(testingConfig)
     print(calculatedJson)
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }
 
   test("Test fake asset GUI - should not stop execution") {
-    val response = new AtlanService("foo", "foo")
+    val response = new AtlanService("foo", "foo", "foo")
       .getGUI("test")
     assert(response.trim.equalsIgnoreCase(""))
   }
@@ -123,9 +203,9 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""),Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""),Option(""),  Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
     )
-    val calculatedJson = new AtlanService("foo", "foo")
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
       .generateMetadaBody(testingConfig)
 
     val expectedJson =

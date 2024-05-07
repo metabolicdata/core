@@ -2,22 +2,22 @@ package com.metabolic.data.core.services.catalogue
 
 import com.metabolic.data.core.services.util.ConfigUtilsService
 import com.metabolic.data.mapper.domain.Config
-import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SQLMapping
 import org.apache.hadoop.shaded.com.google.gson.JsonParseException
 import org.apache.logging.log4j.scala.Logging
+import play.api.libs.json._
 
 import java.math.BigInteger
 import java.security.MessageDigest
-import scala.collection.mutable
-import play.api.libs.json._
-
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import scala.collection.mutable
 
 
-class AtlanService(token: String, baseUrl: String) extends Logging {
+
+
+class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: String) extends Logging {
 
   val versionRegex = """version=(\d)+/""".r
 
@@ -28,9 +28,7 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
   }
 
   def setMetadata(mapping: Config): String = {
-    val outputTable = getOutputTableName(mapping)
-    val dbName = mapping.environment.dbName
-    val qualifiedName = s"${baseUrl}${dbName}/${outputTable}"
+    val qualifiedName = getQualifiedNameOutput(mapping)
     val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
     guid match{
       case "" => ""
@@ -66,19 +64,19 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
 
   def setDescription(mapping: Config): String = {
     val outputTable = getOutputTableName(mapping)
-    val dbName = mapping.environment.dbName
-    val qualifiedName = s"${baseUrl}${dbName}/${outputTable}"
-    val body = generateDescriptionBodyJson(mapping, outputTable, qualifiedName)
+    val qualifiedName = getQualifiedNameOutput(mapping)
+    val typeName = getTypeName(mapping)
+    val body = generateDescriptionBodyJson(outputTable, qualifiedName, typeName)
     logger.info(s"Atlan Description Json Body ${body}")
     HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/bulk#changeDescriptione", body, token)
   }
 
-  def generateDescriptionBodyJson(mapping: Config, outputTable: String, qualifiedName: String): String = {
+  private def generateDescriptionBodyJson(outputTable: String, qualifiedName: String, typeName: String): String = {
     s"""
         |{
         |  "entities": [
         |    {
-        |      "typeName": "Table",
+        |      "typeName": "$typeName",
         |      "attributes": {
         |        "name": "$outputTable",
         |        "qualifiedName": "$qualifiedName",
@@ -93,59 +91,59 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
   def generateBodyJson(mapping: Config): String = {
     val inputTables = getSourceTableNameList(mapping)
     val outputTable = getOutputTableName(mapping)
-    val dbName = mapping.environment.dbName
-    val name = inputTables.mkString(",") + " -> " + s"${dbName}/${outputTable}"
-    val qualifiedName = baseUrl + md5Hash(name)
-    val body: String =
+    val outputType = getTypeName(mapping)
+    val name = inputTables.mkString(",") + " -> " + outputTable
+    val qualifiedName = getQualifiedNameProcess(mapping, name)
+    val connectorName = getConnectorNameProcess(mapping)
+    val connectionName = getConnectionNameProcess(mapping)
+    val connectionQualifiedName = getConnectionQualifiedNameProcess(mapping)
+    val qualifiedNameOutput = getQualifiedNameOutput(mapping)
+    val qualifiedNameInputs = getQualifiedNameInputs(mapping)
+
+    val inputsJson = qualifiedNameInputs.map {  case (sourceType, qualifiedName) =>
       s"""
-         |{
-         |  "entities": [
-         |    {
-         |      "typeName": "Process",
-         |      "attributes": {
-         |        "name": "${name}",
-         |        "qualifiedName": "${qualifiedName}",
-         |        "connectorName": "athena",
-         |        "connectionName": "athena",
-         |        "connectionQualifiedName": "${baseUrl.dropRight(1)}"
-         |      },
-         |      "relationshipAttributes": {
-         |      "outputs": [
          |          {
-         |            "typeName": "Table",
+         |            "typeName": "${sourceType}",
          |            "uniqueAttributes": {
-         |              "qualifiedName": "${baseUrl}${dbName}/${outputTable}"
+         |              "qualifiedName": "${qualifiedName}"
          |            }
-         |          }
-         |        ],
-         |        "inputs": [
-         |""".stripMargin
+         |          }"""
+    }.mkString(",").stripMargin
 
-
-    val bodyWithSourcesNames = inputTables.foldLeft(body) { (body: String, sourceTableName: String) =>
-
-      body +
-        s"""|          {
-            |            "typeName": "Table",
-            |            "uniqueAttributes": {
-            |              "qualifiedName": "${baseUrl}${sourceTableName}"
-            |            }
-            |          },""".stripMargin
-
-    }
-
-    bodyWithSourcesNames
-      .dropRight(1) +
-      """
-        |        ]
-        |      }
-        |    }
-        |  ]
-        |}""".stripMargin
+    s"""
+       |{
+       |  "entities": [
+       |    {
+       |      "typeName": "Process",
+       |      "attributes": {
+       |        "name": "${name}",
+       |        "qualifiedName": "${qualifiedName}",
+       |        "connectorName": "${connectorName}",
+       |        "connectionName": "${connectionName}",
+       |        "connectionQualifiedName": "${connectionQualifiedName}"
+       |      },
+       |      "relationshipAttributes": {
+       |        "outputs": [
+       |          {
+       |            "typeName": "${outputType}",
+       |            "uniqueAttributes": {
+       |              "qualifiedName": "${qualifiedNameOutput}"
+       |            }
+       |          }
+       |        ],
+       |        "inputs": [
+       |${inputsJson}
+       |        ]
+       |      }
+       |    }
+       |  ]
+       |}""".stripMargin
 
   }
 
-  def md5Hash(pwd: String): String = {
+
+
+  private def md5Hash(pwd: String): String = {
     val digest: Array[Byte] = MessageDigest.getInstance("MD5").digest(pwd.getBytes)
     val bigInt = new BigInteger(1, digest).toString(16).trim
     "%1$32s".format(bigInt).replace(' ', '0')
@@ -162,12 +160,22 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
     tables.filter(p => p != "")
   }
 
-  private def getSourceTableName(source: Source,  prefix_namespaces:Seq[String],infix_namespaces:Seq[String], dbName: String): String = {
+  private def getQualifiedNameInputs(config: Config): Seq[(String, String)] = {
+    val options = config.environment
+    val prefix_namespaces = options.namespaces
+    val infix_namespaces = options.infix_namespaces
 
+    config.sources.flatMap { source =>
+      val qualifiedName = getQualifiedNameInput(source, prefix_namespaces, infix_namespaces, options.dbName)
+      if (qualifiedName.nonEmpty) Some((getTypeName(source), qualifiedName)) else None
+    }
+  }
+
+  private def getSourceTableName(source: Source,  prefix_namespaces:Seq[String],infix_namespaces:Seq[String], dbName: String): String = {
 
     source match {
 
-      case streamSource: StreamSource => ""
+      case streamSource: StreamSource => streamSource.topic
 
       case fileSource: FileSource => {
 
@@ -177,16 +185,95 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
         val tableName = ConfigUtilsService.getTableNameFileSink(s3Path)
         dbName + "/" + prefix + infix + tableName
       }
-      case meta: MetastoreSource => meta.name
+      case meta: MetastoreSource => meta.fqn.replace(".", "/")
     }
+  }
+
+  private def getQualifiedNameInput(source: Source,  prefix_namespaces:Seq[String],infix_namespaces:Seq[String], dbName: String): String = {
+
+    source match {
+
+      case streamSource: StreamSource => baseUrlConfluent + streamSource.topic
+
+      case fileSource: FileSource => {
+
+        val s3Path = versionRegex.replaceAllIn(fileSource.inputPath, "")
+        val prefix = ConfigUtilsService.getTablePrefix(prefix_namespaces, s3Path)
+        val infix = ConfigUtilsService.getTableInfix(infix_namespaces, s3Path)
+        val tableName = ConfigUtilsService.getTableNameFileSink(s3Path)
+        baseUrlDataLake + dbName + "/" + prefix + infix + tableName
+      }
+      case meta: MetastoreSource => baseUrlDataLake + meta.fqn.replace(".", "/")
+    }
+  }
+
+  private def getQualifiedNameProcess(mapping: Config, name: String): String = {
+
+    mapping.sink match {
+      case _: StreamSink =>
+        baseUrlConfluent + md5Hash(name)
+      case _: FileSink =>
+        baseUrlDataLake + md5Hash(name)    }
+
+  }
+
+  private def getConnectorNameProcess(mapping: Config): String = mapping.sink match {
+    case _: StreamSink => "confluent-kafka"
+    case _: FileSink => "athena"
+  }
+
+  private def getConnectionNameProcess(mapping: Config): String = mapping.sink match {
+    case _: StreamSink => "production"
+    case _: FileSink => "athena"
+  }
+
+  private def getConnectionQualifiedNameProcess(mapping: Config): String = {
+    val baseUrl = if (mapping.sink.isInstanceOf[StreamSink]) baseUrlConfluent else baseUrlDataLake
+    baseUrl.dropRight(1)
+  }
+
+  private def getQualifiedNameOutput(mapping: Config): String = {
+    val baseUrl = if (mapping.sink.isInstanceOf[StreamSink]) baseUrlConfluent else baseUrlDataLake
+    s"$baseUrl${getOutputTableName(mapping)}"
   }
 
   private def getOutputTableName(mapping: Config): String = {
     //Extract table name from s3 path
-    val s3Path = versionRegex.replaceAllIn(mapping.sink.asInstanceOf[FileSink].path, "")
-    ConfigUtilsService.getTablePrefix(mapping.environment.namespaces, s3Path) +
-      ConfigUtilsService.getTableInfix(mapping.environment.infix_namespaces, s3Path) +
-      ConfigUtilsService.getTableName(mapping)
+    mapping.sink match {
+      case fileSink: FileSink => {
+        val s3Path = versionRegex.replaceAllIn(fileSink.path, "")
+        val prefix =ConfigUtilsService.getTablePrefix(mapping.environment.namespaces, s3Path)
+        val infix = ConfigUtilsService.getTableInfix(mapping.environment.infix_namespaces, s3Path)
+        val tableName = ConfigUtilsService.getTableName(mapping)
+        val dbName = mapping.environment.dbName
+        dbName + "/" + prefix + infix + tableName
+      }
+      case streamSink: StreamSink => {
+        ConfigUtilsService.getTableName(mapping)
+      }
+      case metastoreSource: MetastoreSource => metastoreSource.fqn.replace(".", "/")
+    }
+
+  }
+
+  private def getTypeName(mapping: Config): String = {
+    // Extract typeName from sink type
+    mapping.sink match {
+      case _: StreamSink =>
+        "KafkaTopic"
+      case _: FileSink =>
+        "Table"
+    }
+  }
+
+  private def getTypeName(source: Source): String = {
+    // Extract typeName from sink type
+    source match {
+      case _: StreamSource =>
+        "KafkaTopic"
+      case _: FileSource =>
+        "Table"
+    }
   }
 
   def getGUI(qualifiedName: String): String = {
@@ -219,5 +306,4 @@ class AtlanService(token: String, baseUrl: String) extends Logging {
       case _: JsonParseException => false
     }
   }
-
 }

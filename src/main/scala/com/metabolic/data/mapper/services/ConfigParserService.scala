@@ -2,6 +2,7 @@ package com.metabolic.data.mapper.services
 
 import com.amazonaws.regions.Regions
 import com.metabolic.data.core.domain.{Defaults, Environment}
+import com.metabolic.data.core.services.util.SecretsManagerService
 import com.metabolic.data.mapper.domain._
 import com.metabolic.data.mapper.domain.io.EngineMode
 import com.metabolic.data.mapper.domain.ops._
@@ -56,18 +57,6 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       EngineMode.Batch
     }
 
-    val atlanToken = if (config.hasPathOrNull("atlan")){
-      Option.apply(config.getString("atlan"))
-    } else {
-      Option.empty
-    }
-
-    val atlanBaseUrl = if (config.hasPathOrNull("atlan_url")) {
-      Option.apply(config.getString("atlan_url"))
-    } else {
-      Option.empty
-    }
-
     val autoSchema = if (config.hasPathOrNull("autoSchema")){
       config.getBoolean("autoSchema")
     } else {
@@ -104,7 +93,27 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       Regions.fromName("eu-central-1")
     }
 
-    Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, region, atlanToken, atlanBaseUrl,historical, autoSchema, namespaces, infix_namespaces, enableJDBC, queryOutputLocation)
+    var atlanToken: Option[String] = None
+    var atlanBaseUrlDataLake: Option[String] = None
+    var atlanBaseUrlConfluent: Option[String] = None
+
+    val atlan = if (config.hasPathOrNull("atlan")){
+      Option.apply(config.getString("atlan"))
+    } else {
+      Option.empty
+    }
+    if (atlan.isDefined && atlan.get.nonEmpty) {
+
+      val secrets = new SecretsManagerService()(region)
+      val kafkaSecretValue = secrets.get(atlan.get)
+      val kafkaConfig = secrets.parseDict[AtlanConnection](kafkaSecretValue)
+
+      atlanToken = kafkaConfig.atlan_token
+      atlanBaseUrlDataLake = kafkaConfig.atlan_url_data_lake
+      atlanBaseUrlConfluent = kafkaConfig.atlan_url_confluent
+
+    }
+    Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, region, atlanToken, atlanBaseUrlDataLake, atlanBaseUrlConfluent, historical, autoSchema, namespaces, infix_namespaces, enableJDBC, queryOutputLocation)
   }
 
   private def parseDefaults(config: HoconConfig) = {

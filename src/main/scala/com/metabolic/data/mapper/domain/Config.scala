@@ -33,7 +33,7 @@ object Config {
   def apply(name: String, sources: Seq[Source], mappings: Seq[Mapping], sink: Sink): Config = {
     val defaults: Defaults = Defaults(ConfigFactory.load())
     val environment: Environment = Environment("", EngineMode.Batch, "", false,"test","",
-      Regions.fromName("eu-central-1"),Option.empty, Option.empty)
+      Regions.fromName("eu-central-1"),Option.empty, Option.empty, Option.empty)
     new Config(name, sources, mappings, sink, defaults, environment)
   }
 }

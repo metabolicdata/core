@@ -6,4 +6,4 @@ import com.typesafe.config.ConfigFactory
 
 abstract class CoreConfig(val defaults: Defaults = Defaults(ConfigFactory.load()),
                           val environment: Environment = Environment("", EngineMode.Batch, "", false, "","",
-                            Regions.fromName("eu-central-1"), Option.empty, Option.empty))
+                            Regions.fromName("eu-central-1"), Option.empty, Option.empty, Option.empty))
