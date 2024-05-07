@@ -64,10 +64,12 @@ class ConfigParserService(implicit region: Regions) extends Logging {
     }
 
     val namespaces = if (config.hasPathOrNull("namespaces")){
+      logger.info("Parsing namespaces")
       config.getString("namespaces").split(",").toSeq
     } else {
       Seq.empty
     }
+    logger.info(f"Namespaces: $namespaces")
 
     val infix_namespaces = if (config.hasPathOrNull("infix_namespaces")) {
       config.getString("infix_namespaces").split(",").toSeq
