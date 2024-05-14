@@ -40,6 +40,10 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
       Option(config.getString("eventDtColumn"))
     } else None
 
+    val optimize = if(config.hasPath("optimize")) {
+      Option(config.getBoolean("optimize"))
+    } else None
+
     val optimizeEvery = if (config.hasPath("optimizeEvery")) {
       Option(config.getInt("optimizeEvery"))
     } else None
@@ -56,7 +60,7 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
 
     FileSink(name, path, writeMode, IOFormat.DELTA, idColumnName, eventTimeColumnName,
       processingTimeColumnName=processingTimeColumnName, partitionColumnNames = partitionCols, upsert = upsert, ops = ops,
-      checkpointLocation = checkpointLocation, dbName = dbName, optimizeEvery = optimizeEvery )
+      checkpointLocation = checkpointLocation, dbName = dbName, optimize = optimize, optimizeEvery = optimizeEvery )
   }
 
   private def parseJsonSink(name: String, config: HoconConfig, ops: Seq[SinkOp]): Sink = {

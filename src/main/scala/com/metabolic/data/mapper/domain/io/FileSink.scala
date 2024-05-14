@@ -16,6 +16,7 @@ case class FileSink(name: String,
                     ops: Seq[SinkOp] = Seq.empty,
                     checkpointLocation: Option[String] = None,
                     dbName: String = "",
+                    optimize: Option[Boolean] = None,
                     optimizeEvery: Option[Int] = None
                    )
   extends Sink

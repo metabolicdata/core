@@ -14,9 +14,10 @@ class DeltaZOrderWriter(val partitionColumnNames: Seq[String],
                         idColumnName: Option[String],
                         dbName: String,
                         override val checkpointLocation: String,
-                        namespaces: Seq[String])(implicit regions: Regions, spark: SparkSession)
+                        namespaces: Seq[String],
+                        optimize: Option[Boolean] = None, optimizeEvery: Option[Int] = None, retention: Double = 168d)(implicit regions: Regions, spark: SparkSession)
 
-  extends DeltaWriter(outputPath, writeMode, dateColumnName, idColumnName, checkpointLocation, dbName, namespaces)
+  extends DeltaWriter(outputPath, writeMode, dateColumnName, idColumnName, checkpointLocation, dbName, namespaces, optimize, optimizeEvery)
     with DataframePartitionWriter {
 
   override val output_identifier: String = outputPath
