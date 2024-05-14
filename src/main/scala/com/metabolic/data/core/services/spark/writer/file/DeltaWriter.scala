@@ -153,7 +153,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           if (optimize) {
             baseQuery.foreachBatch(appendToDelta _).start
           } else {
-            baseQuery.option("mergeSchema", "true").start
+            baseQuery.start
           }
 
         case WriteMode.Overwrite =>
