@@ -95,7 +95,7 @@ class DeltaWriterTest extends AnyFunSuite
 
     val secondWriter = new DeltaWriter( path,
       WriteMode.Overwrite,
-      Option("date"), Option("name"), "default", "",Seq.empty[String],0d) (region, spark)
+      Option("date"), Option("name"), "default", "",Seq.empty[String],Option(true), Option(1), 0d) (region, spark)
 
     secondWriter.write(updateDF, EngineMode.Batch)
 
@@ -594,7 +594,7 @@ class DeltaWriterTest extends AnyFunSuite
       "default",
       "",
       Seq.empty[String],
-      0d)(region, spark)
+      Option(true))(region, spark)
 
     secondWriter.write(deleteDF, EngineMode.Batch)
 
@@ -647,7 +647,8 @@ class DeltaWriterTest extends AnyFunSuite
       "default",
       "",
       Seq.empty[String],
-      0)(region, spark)
+      Option(true),
+      Option(0))(region, spark)
 
 
     firstWriter.write(inputDF, EngineMode.Batch)
