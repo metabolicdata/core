@@ -163,7 +163,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           val baseQuery = df
             .writeStream
             .outputMode("append")
-            .option("mergeSchema", "true")
+            .option("overwriteSchema", "true")
             .option("checkpointLocation", checkpointLocation)
 
           if (optimize) {
