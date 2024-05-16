@@ -47,7 +47,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .option("txnVersion", batchId).option("txnAppId", output_identifier)
           .delta(output_identifier)
 
-      if (batchId % optimizeEvery == 0) {
+      if (batchId % optimizeEvery == 0 && optimize) {
         compactAndVacuum
       }
 
@@ -60,7 +60,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
       .option("txnVersion", batchId).option("txnAppId", output_identifier)
       .delta(output_identifier)
 
-    if (batchId % optimizeEvery == 0) {
+    if (batchId % optimizeEvery == 0 && optimize) {
       compactAndVacuum
     }
 
@@ -143,34 +143,24 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
 
       val data_query = writeMode match {
         case WriteMode.Append => df
-
-          val baseQuery = df
-            .writeStream
-            .outputMode("append")
-            .option("mergeSchema", "true")
-            .option("checkpointLocation", checkpointLocation)
-
-          if (optimize) {
-            baseQuery.foreachBatch(appendToDelta _).start
-          } else {
-            baseQuery.start(outputPath)
-          }
+          .writeStream
+          .outputMode("append")
+          .option("mergeSchema", "true")
+          .option("checkpointLocation", checkpointLocation)
+          .foreachBatch(appendToDelta _)
+          .start
 
         case WriteMode.Overwrite =>
 
           DeltaTable.forPath(outputPath).delete()
 
-          val baseQuery = df
+          df
             .writeStream
             .outputMode("append")
             .option("overwriteSchema", "true")
             .option("checkpointLocation", checkpointLocation)
-
-          if (optimize) {
-            baseQuery.foreachBatch(appendToDelta _).start
-          } else {
-            baseQuery.start(outputPath)
-          }
+            .foreachBatch(appendToDelta _)
+            .start
 
         case WriteMode.Upsert => df
           .writeStream
