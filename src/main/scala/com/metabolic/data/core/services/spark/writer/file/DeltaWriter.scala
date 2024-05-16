@@ -47,7 +47,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .option("txnVersion", batchId).option("txnAppId", output_identifier)
           .delta(output_identifier)
 
-      if (batchId % optimizeEvery == 0 && optimize) {
+      if (optimize && batchId % optimizeEvery == 0) {
         compactAndVacuum
       }
 
@@ -60,7 +60,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
       .option("txnVersion", batchId).option("txnAppId", output_identifier)
       .delta(output_identifier)
 
-    if (optimize && batchId % optimizeEvery == 0 ) {
+    if (optimize && batchId % optimizeEvery == 0) {
       compactAndVacuum
     }
 
@@ -84,7 +84,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
         .whenNotMatched().insertAll()
         .execute()
 
-      if (optimize && batchId % optimizeEvery == 0 ){
+      if (optimize && batchId % optimizeEvery == 0){
         compactAndVacuum
       }
     }
