@@ -4,6 +4,7 @@
 #Input of tests
 src/test/resources/prod/*
 src/test/scala/EndToEndTest.scala
+src/test/models/*
 
 #Output of tests
 src/test/tmp/*
