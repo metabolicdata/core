@@ -273,6 +273,8 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
         "KafkaTopic"
       case _: FileSource =>
         "Table"
+      case _: MetastoreSource =>
+        "Table"
     }
   }
 
