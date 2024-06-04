@@ -73,10 +73,19 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     val servers = kafkaConfig.servers.get
     val apiKey = kafkaConfig.key.get
     val apiSecret = kafkaConfig.secret.get
+    val schemaRegistryUrl = kafkaConfig.schemaRegistryUrl.getOrElse("")
+    val srApiKey = kafkaConfig.srKey.getOrElse("")
+    val srApiSecret = kafkaConfig.srSecret.getOrElse("")
+    val schemaRegistry = if (config.hasPath("schemaRegistry")) {
+      Option(config.getString("schemaRegistry").toLowerCase())
+    } else None
+
 
     val topic = config.getString("topic")
 
-    StreamSource(name, servers, apiKey, apiSecret, topic, IOFormat.KAFKA, ops)
+    StreamSource(name, servers, apiKey, apiSecret, topic,
+      schemaRegistryUrl, srApiKey, srApiSecret, schemaRegistry,
+      IOFormat.KAFKA, ops = ops)
   }
 
   private def parseMetastoreSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {

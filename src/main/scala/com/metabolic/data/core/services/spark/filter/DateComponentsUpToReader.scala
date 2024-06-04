@@ -1,7 +1,6 @@
 package com.metabolic.data.core.services.spark.filter
 
 import DataLakeDepth.DataLakeDepth
-import org.apache.commons.lang.NotImplementedException
 import org.apache.logging.log4j.scala.Logging
 import org.joda.time.DateTime
 
