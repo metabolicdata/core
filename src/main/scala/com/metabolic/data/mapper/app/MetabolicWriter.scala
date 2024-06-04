@@ -118,7 +118,7 @@ object MetabolicWriter extends Logging {
 
           case IOFormat.DELTA =>
             new DeltaZOrderWriter(repartitioner.partitionColumnNames, path, fileWriteMode, fileSink.eventTimeColumnName,
-              fileSink.idColumnName, fileSink.dbName, checkpointPath, namespaces)
+              fileSink.idColumnName, fileSink.dbName, checkpointPath, namespaces, fileSink.optimize, fileSink.optimizeEvery)
               .write(_output, mode)
 
         }

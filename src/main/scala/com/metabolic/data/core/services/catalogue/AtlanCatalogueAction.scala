@@ -11,27 +11,19 @@ class AtlanCatalogueAction extends AfterAction with Logging {
 
   def run(config: Config): Unit = {
 
-    config.sink match {
-      case _: FileSink =>
-        config.environment.atlanToken match {
-          case Some(token) =>
-            config.environment.atlanBaseUrl match {
-              case Some(atlanBaseUrl) =>
-
-                val atlan = new AtlanService(token, atlanBaseUrl)
-                atlan.setLineage(config)
-                atlan.setMetadata(config)
-
-                logger.info(s"After Action $name: Pushed lineage generated in ${config.name} to Atlan")
-              case _ =>
-                logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Url is not provided")
-          }
+    config.environment.atlanToken match {
+      case Some(token) =>
+        (config.environment.atlanBaseUrlDataLake, config.environment.atlanBaseUrlConfluent) match {
+          case (Some(_), Some(_)) =>
+            val atlan = new AtlanService(token, config.environment.atlanBaseUrlDataLake.get, config.environment.atlanBaseUrlConfluent.get)
+            atlan.setLineage(config)
+            atlan.setMetadata(config)
+            logger.info(s"After Action $name: Pushed lineage generated in ${config.name} to Atlan")
           case _ =>
-            logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Token is not provided")
+            logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Url is not provided")
         }
-      case _ =>
-        logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a FileSink")
-
+      case None =>
+        logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Token is not provided")
     }
   }
 }

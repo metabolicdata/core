@@ -100,7 +100,8 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       Option("name"),
       "default",
       "",
-      Seq.empty[String])(region, spark)
+      Seq.empty[String],
+      None)(region, spark)
 
     firstWriter.write(batchDf, EngineMode.Batch)
 
@@ -133,7 +134,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       Option("name"),
       pathCheckpoint,
       "",
-      Seq.empty[String], 168d,1)(region, spark)
+      Seq.empty[String], Option(true), Option(1), 168d)(region, spark)
 
     val query = secondWriter
       .write(inputDf, EngineMode.Stream)
@@ -224,7 +225,8 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       None,
       "default",
       "",
-      Seq.empty[String], 0)(region, spark)
+      Seq.empty[String],
+    )   (region, spark)
 
     firstWriter.write(batchDf, EngineMode.Batch)
 
@@ -256,7 +258,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       Option("name"),
       pathCheckpoint,
       "",
-      Seq.empty[String],168d ,1)(region, spark)
+      Seq.empty[String], Option(true), Option(1), 168d)(region, spark)
 
     val query = secondWriter
       .write(inputDf, EngineMode.Stream)
@@ -333,7 +335,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       None,
       "default",
       "",
-      Seq.empty[String], 0)(region, spark)
+      Seq.empty[String], Option(false), Option(1), 168d)(region, spark)
 
     firstWriter.write(batchDf, EngineMode.Batch)
 
@@ -365,7 +367,7 @@ class DeltaWriterStreamingTest extends AnyFunSuite
       Option("name"),
       pathCheckpoint,
       "",
-      Seq.empty[String], 168d, 1)(region, spark)
+      Seq.empty[String], Option(true), Option(1), 168d)(region, spark)
 
     val query = secondWriter
       .write(inputDf, EngineMode.Stream)

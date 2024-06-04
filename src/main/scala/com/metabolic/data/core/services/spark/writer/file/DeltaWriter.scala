@@ -13,8 +13,9 @@ import scala.reflect.io.File
 class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
                   val dateColumnName: Option[String], val idColumnName: Option[String],
                   val checkpointLocation: String,
-                  val dbName: String, val namespaces: Seq[String], val retention: Double = 168d,
-                  val optimizeEvery: Int = 10) (implicit val region: Regions, implicit  val spark: SparkSession)
+                  val dbName: String, val namespaces: Seq[String],
+                  val optimizeOption : Option[Boolean] = None, val optimizeEveryOption: Option[Int] = None,
+                  val retention: Double = 168d) (implicit val region: Regions, implicit  val spark: SparkSession)
 
   extends DataframeUnifiedWriter {
 
@@ -24,6 +25,9 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
 
     private val dateColumnNameDelta: String = dateColumnName.getOrElse("")
     private val idColumnNameDelta: String = idColumnName.getOrElse("")
+
+    private val optimizeEvery = optimizeEveryOption.getOrElse(10)
+    private val optimize = optimizeOption.getOrElse(true)
 
     protected def compactAndVacuum(): Unit = {
       logger.info(s"Compacting Delta table $outputPath")
@@ -43,7 +47,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
           .option("txnVersion", batchId).option("txnAppId", output_identifier)
           .delta(output_identifier)
 
-      if (batchId % optimizeEvery == 0) {
+      if (optimize && batchId % optimizeEvery == 0) {
         compactAndVacuum
       }
 
@@ -56,7 +60,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
       .option("txnVersion", batchId).option("txnAppId", output_identifier)
       .delta(output_identifier)
 
-    if (batchId % optimizeEvery == 0) {
+    if (optimize && batchId % optimizeEvery == 0) {
       compactAndVacuum
     }
 
@@ -80,7 +84,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
         .whenNotMatched().insertAll()
         .execute()
 
-      if (batchId % optimizeEvery == 0) {
+      if (optimize && batchId % optimizeEvery == 0){
         compactAndVacuum
       }
     }
@@ -100,7 +104,7 @@ class DeltaWriter(val outputPath: String, val writeMode: WriteMode,
       .whenMatched().delete()
       .execute()
 
-    if (batchId % optimizeEvery == 0) {
+    if (optimize && batchId % optimizeEvery == 0) {
       compactAndVacuum
     }
   }

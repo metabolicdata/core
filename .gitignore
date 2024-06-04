@@ -308,6 +308,7 @@ terraform/.terraform
 
 old_envs/*
 
+### VSCode ###
 .bloop/
 .metals/
 .vscode/
