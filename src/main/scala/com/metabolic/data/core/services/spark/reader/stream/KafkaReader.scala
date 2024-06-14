@@ -68,6 +68,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .option("startingOffsets", "latest")
       .option("groupIdPrefix",s"metabolic-stream-${consumerGroup}")
       .option("failOnDataLoss", false)
+      .option("maxOffsetsPerTrigger", 100)
 
 
     val input = setStreamAuthentication(plain)
@@ -87,6 +88,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .option("groupIdPrefix",s"metabolic-batch-${consumerGroup}")
       .option("startingOffsets", "earliest")
       .option("endingOffsets", "latest")
+      .option("maxOffsetsPerTrigger", 100)
 
     val input = setDFAuthentication(plain)
       .load()
