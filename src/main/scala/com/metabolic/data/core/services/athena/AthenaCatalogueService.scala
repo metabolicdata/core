@@ -28,7 +28,7 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
   private def dropTableStatement(dbName: String, tableName: String) = {
 
     s"DROP TABLE IF EXISTS " +
-      s"`$dbName`.`$tableName`"
+      s"`$dbName.\"$tableName\"`"
   }
 
   def dropView(dbName: String, viewName: String) = {
