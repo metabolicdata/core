@@ -3,7 +3,8 @@ package com.metabolic.data.core.services.athena
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.athena._
-import com.amazonaws.services.athena.model.{GetQueryResultsRequest, QueryExecutionContext, StartQueryExecutionRequest}
+import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, GetQueryExecutionResult, GetQueryResultsRequest, QueryExecutionContext, StartQueryExecutionRequest}
+import org.apache.kafka.common.utils.Utils.sleep
 import org.apache.logging.log4j.scala.Logging
 
 
@@ -40,11 +41,32 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
 
   }
 
+  def getQueryExecutionState(queryExecutionId: String): String = {
+    val getQueryExecutionRequest = new GetQueryExecutionRequest().withQueryExecutionId(queryExecutionId)
+    val getQueryExecutionResult: GetQueryExecutionResult = athenaClient.getQueryExecution(getQueryExecutionRequest)
+    getQueryExecutionResult.getQueryExecution.getStatus.getState
+  }
+
   def createDeltaTable(dbName:String, tableName:String, location: String, recreate: Boolean = false) = {
 
     if(recreate) {
       val delete_statement = dropTableStatement(dbName, tableName)
       dropTable(dbName, tableName, delete_statement)
+      val queryExecutionContext = new QueryExecutionContext().withDatabase(dbName)
+      val startQueryExecutionRequest = new StartQueryExecutionRequest()
+        .withQueryString(delete_statement)
+        .withQueryExecutionContext(queryExecutionContext)
+      val queryExecutionId = athenaClient.startQueryExecution(startQueryExecutionRequest).getQueryExecutionId
+
+      // Wait for SUCCEEDED
+      logger.info(s"Waiting for query $queryExecutionId to complete...")
+      var queryState = "RUNNING"
+
+      while (queryState != "SUCCEEDED" && queryState != "FAILED") {
+        sleep(1000)
+        queryState = getQueryExecutionState(queryExecutionId)
+        logger.info(s"Query state: $queryState")
+      }
     }
 
     val statement = createTableStatement(dbName, tableName, location)
