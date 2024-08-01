@@ -47,41 +47,59 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
     getQueryExecutionResult.getQueryExecution.getStatus.getState
   }
 
-  def createDeltaTable(dbName:String, tableName:String, location: String, recreate: Boolean = false) = {
+  def athenaQueryExecution(dbName: String, statement: String): String = {
+    val queryExecutionContext = new QueryExecutionContext().withDatabase(dbName)
+    val startQueryExecutionRequest = new StartQueryExecutionRequest()
+      .withQueryString(statement)
+      .withQueryExecutionContext(queryExecutionContext)
+    val queryExecutionId = athenaClient.startQueryExecution(startQueryExecutionRequest).getQueryExecutionId
+
+    queryExecutionId
+  }
+
+  def getQueryStatus(queryExecutionId: String): String = {
+    var queryState = "RUNNING"
+
+    while (queryState != "SUCCEEDED" && queryState != "FAILED") {
+      sleep(1000)
+      queryState = getQueryExecutionState(queryExecutionId)
+    }
+    queryState
+  }
+
+  def checkSchemaChange(dbName: String, tableName: String): Boolean = {
+    val statement = s"SELECT 1 FROM " +
+      s"$dbName.$tableName"
+    val queryExecutionId = athenaQueryExecution(dbName, statement)
+
+    logger.info(s"Checking if schema has changed... Waiting for query $queryExecutionId to complete...")
+    val queryState = getQueryStatus(queryExecutionId)
+    queryState == "FAILED"
+  }
+
+  def createDeltaTable(dbName:String, tableName:String, location: String) = {
+
+    val recreate = checkSchemaChange(dbName, tableName)
 
     if(recreate) {
+      logger.info(s"Schema has changed for table $tableName")
       val delete_statement = dropTableStatement(dbName, tableName)
-      dropTable(dbName, tableName, delete_statement)
-      val queryExecutionContext = new QueryExecutionContext().withDatabase(dbName)
-      val startQueryExecutionRequest = new StartQueryExecutionRequest()
-        .withQueryString(delete_statement)
-        .withQueryExecutionContext(queryExecutionContext)
-      val queryExecutionId = athenaClient.startQueryExecution(startQueryExecutionRequest).getQueryExecutionId
+      logger.info(s"Drop table statement for ${dbName}.${tableName} is ${delete_statement}")
+      //dropTable(dbName, tableName, delete_statement)
 
-      // Wait for SUCCEEDED
+      val queryExecutionId = athenaQueryExecution(dbName, delete_statement)
+
+      // Wait for table deletion
       logger.info(s"Waiting for query $queryExecutionId to complete...")
-      var queryState = "RUNNING"
-
-      while (queryState != "SUCCEEDED" && queryState != "FAILED") {
-        sleep(1000)
-        queryState = getQueryExecutionState(queryExecutionId)
-        logger.info(s"Query state: $queryState")
-      }
+      getQueryStatus(queryExecutionId)
     }
 
     val statement = createTableStatement(dbName, tableName, location)
     logger.info(s"Create table statement for ${dbName}.${tableName} is ${statement}")
-    val queryExecutionContext = new QueryExecutionContext().withDatabase(dbName)
-    //val resultConfiguration = new ResultConfiguration().withOutputLocation(path)
+    val queryExecutionId = athenaQueryExecution(dbName, statement)
 
-    val startQueryExecutionRequest = new StartQueryExecutionRequest()
-      .withQueryString(statement)
-      .withQueryExecutionContext(queryExecutionContext)
-      //.withResultConfiguration(resultConfiguration)
-    val queryExecutionId = athenaClient.startQueryExecution(startQueryExecutionRequest).getQueryExecutionId
     logger.info(s"Table ${dbName}.${tableName} has been created")
-    val getQueryResultsRequest = new GetQueryResultsRequest().withQueryExecutionId(queryExecutionId)
-
+    //val getQueryResultsRequest = new GetQueryResultsRequest().withQueryExecutionId(queryExecutionId)
   }
 
   private def dropTable(dbName: String, tableName: String, statement: String) = {

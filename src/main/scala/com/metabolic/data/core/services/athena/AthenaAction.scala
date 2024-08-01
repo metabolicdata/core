@@ -30,7 +30,7 @@ class AthenaAction extends AfterAction with Logging {
               ConfigUtilsService.getTablePrefix(options.namespaces, s3Path)
             val tableName = prefix + ConfigUtilsService.getTableName(config)
             athena.dropView(dbName, tableName)
-            athena.createDeltaTable(dbName, tableName, s3Path, recreate = true)
+            athena.createDeltaTable(dbName, tableName, s3Path)
 
           case _ =>
             logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a DeltaSink")
