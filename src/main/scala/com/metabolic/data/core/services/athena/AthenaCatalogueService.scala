@@ -91,13 +91,15 @@ class AthenaCatalogueService(implicit val region: Regions) extends Logging {
       // Wait for table deletion
       logger.info(s"Waiting for query $queryExecutionId to complete...")
       getQueryStatus(queryExecutionId)
+    } else {
+      logger.info(s"Schema has not changed for table $tableName")
     }
 
     val statement = createTableStatement(dbName, tableName, location)
     logger.info(s"Create table statement for ${dbName}.${tableName} is ${statement}")
     val queryExecutionId = athenaQueryExecution(dbName, statement)
 
-    logger.info(s"Table ${dbName}.${tableName} has been created")
+    logger.info(s"Table ${dbName}.${tableName} has been created in query id $queryExecutionId")
   }
 
 }
