@@ -6,7 +6,7 @@ import org.scalatest.funsuite.AnyFunSuite
 
 class SecretsManagerServiceTest extends AnyFunSuite with RegionedTest  {
 
-  ignore("Works") {
+  test("Works") {
     val x = new SecretsManagerService()
       .get("production/database_credentials")
 
