@@ -4,7 +4,7 @@ import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import org.apache.spark.sql.streaming.StreamingQuery
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, DataFrame, Row, SparkSession}
 
 class IcebergWriter(
                      val fqn: String,
@@ -55,23 +55,11 @@ class IcebergWriter(
     }
   }
 
-  override def preHook(df: DataFrame): DataFrame = {
-
-    val emptyRDD = spark.sparkContext.emptyRDD[Row]
-    val emptyDF = spark.createDataFrame(emptyRDD,df.schema)
-
-    emptyDF.writeTo(output_identifier).create()
-
-    df
-  }
-
   override def postHook(df: DataFrame, query: Seq[StreamingQuery]): Unit = {
 
     if (query.isEmpty) {
-      spark.sql(s"CALL catalog_name.system.rewrite_data_files('$output_identifier');")
+      spark.sql(s"CALL local.system.rewrite_data_files('$output_identifier')")
     }
-
   }
 
-
-  }
+}
