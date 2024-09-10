@@ -3,7 +3,7 @@ package com.metabolic.data.mapper.app
 import com.metabolic.data.core.services.spark.filter.{DateComponentsFromReader, DateComponentsUpToReader, DateFieldFromReader, DateFieldUpToReader}
 import com.metabolic.data.core.services.spark.reader.file.{CSVReader, DeltaReader, JSONReader, ParquetReader}
 import com.metabolic.data.core.services.spark.reader.stream.KafkaReader
-import com.metabolic.data.core.services.spark.reader.table.TableReader
+import com.metabolic.data.core.services.spark.reader.table.{IcebergReader, TableReader}
 import com.metabolic.data.core.services.spark.transformations._
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
@@ -55,12 +55,10 @@ object MetabolicReader extends Logging {
     }
    }
 
-   case meta: MetastoreSource => {
+   case meta: TableSource => {
     logger.info(s"Reading source ${meta.fqn} already in metastore")
 
-    new TableReader(meta.fqn, enableJDBC, queryOutputLocation)
-      .read(spark, mode)
-
+    new IcebergReader(meta.fqn).read(spark, mode)
    }
   }
  }

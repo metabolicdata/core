@@ -10,4 +10,6 @@ object IOFormat extends Enumeration {
   val DELTA =  Value("delta")
   val DELTA_PARTITION =  Value("delta_partition")
   val KAFKA =  Value("kafka")
+  val ICEBERG =  Value("iceberg")
+
 }

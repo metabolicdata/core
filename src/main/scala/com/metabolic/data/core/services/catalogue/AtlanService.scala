@@ -185,7 +185,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
         val tableName = ConfigUtilsService.getTableNameFileSink(s3Path)
         dbName + "/" + prefix + infix + tableName
       }
-      case meta: MetastoreSource => meta.fqn.replace(".", "/")
+      case meta: TableSource => meta.fqn.replace(".", "/")
     }
   }
 
@@ -203,7 +203,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
         val tableName = ConfigUtilsService.getTableNameFileSink(s3Path)
         baseUrlDataLake + dbName + "/" + prefix + infix + tableName
       }
-      case meta: MetastoreSource => baseUrlDataLake + meta.fqn.replace(".", "/")
+      case meta: TableSource => baseUrlDataLake + meta.fqn.replace(".", "/")
     }
   }
 
@@ -251,7 +251,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
       case streamSink: StreamSink => {
         ConfigUtilsService.getTableName(mapping)
       }
-      case metastoreSource: MetastoreSource => metastoreSource.fqn.replace(".", "/")
+      case metastoreSource: TableSource => metastoreSource.fqn.replace(".", "/")
     }
 
   }
@@ -273,7 +273,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
         "KafkaTopic"
       case _: FileSource =>
         "Table"
-      case _: MetastoreSource =>
+      case _: TableSource =>
         "Table"
     }
   }

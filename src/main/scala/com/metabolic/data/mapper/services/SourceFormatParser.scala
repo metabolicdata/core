@@ -82,7 +82,7 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
   private def parseMetastoreSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val fqdn = config.getString("catalog")
 
-    MetastoreSource(fqdn, name, ops)
+    TableSource(fqdn, name, ops)
   }
 
 }

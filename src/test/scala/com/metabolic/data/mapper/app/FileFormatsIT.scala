@@ -5,6 +5,7 @@ import com.metabolic.data.RegionedTest
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SQLStatmentMapping
 import com.metabolic.data.mapper.domain.{Config, io}
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Row, SaveMode}
 import org.scalatest.BeforeAndAfterAll
@@ -15,6 +16,15 @@ class FileFormatsIT extends AnyFunSuite
   with SharedSparkContext
   with BeforeAndAfterAll
   with RegionedTest {
+
+  override def conf: SparkConf = super.conf
+    .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+    .set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
+    .set("spark.sql.catalog.spark_catalog.type", "hive")
+    .set("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
+    .set("spark.sql.catalog.local.type", "hadoop")
+    .set("spark.sql.catalog.local.warehouse", "./warehouse")
+    .set("spark.sql.defaultCatalog", "local")
 
   test("Write parquet") {
 
@@ -178,7 +188,7 @@ class FileFormatsIT extends AnyFunSuite
 
     val testingConfig = Config(
       "",
-      List(MetastoreSource("fake_json_employees", "employees")),
+      List(TableSource("fake_json_employees", "employees")),
       List(SQLStatmentMapping(multilineSQL)),
       io.FileSink("test", "src/test/tmp_formats/table_fake_json_employees_t", WriteMode.Overwrite, IOFormat.JSON)
     )
@@ -208,6 +218,70 @@ class FileFormatsIT extends AnyFunSuite
     assertDataFrameNoOrderEquals(
       expectedEmployeeDF.select("name", "new_age"),
       NT_fakeEmployeesDF.select("name", "new_age")
+    )
+  }
+
+  test("Write table") {
+
+    val inputEmployeesData = Seq(
+      Row("Marc", "33"),
+      Row("Pau", "30")
+    )
+
+    val inputSchema = List(
+      StructField("name", StringType, true),
+      StructField("age", StringType, true)
+    )
+
+    val inputDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(inputEmployeesData),
+      StructType(inputSchema)
+    )
+
+    val fqnInput = "local.data_lake.employees"
+
+    inputDf
+      .write
+      .format("iceberg")
+      .mode("overwrite")
+      .saveAsTable(fqnInput)
+
+
+    val expectedEmployeesData = Seq(
+      Row("Marc", 33L),
+      Row("Pau", 30L)
+    )
+
+    val expectedSchema = List(
+      StructField("name", StringType, true),
+      StructField("age", LongType, true)
+    )
+
+    val fqnOutput = "local.data_lake.employees_long"
+
+    val multilineSQL = "select name, cast(age as long) as age from employees"
+
+    val testingConfig = Config(
+      "",
+      List(TableSource(fqnInput, "employees")),
+      List(SQLStatmentMapping(multilineSQL)),
+      TableSink("test", fqnOutput, WriteMode.Overwrite, List.empty)
+    )
+
+    MetabolicApp()
+      .transformAll(List(testingConfig))(region, spark)
+
+    val expectedDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedEmployeesData),
+      StructType(expectedSchema)
+    )
+
+    val outputDf = spark.table(fqnOutput)
+
+
+    assertDataFrameNoOrderEquals(
+      expectedDf //.select("name", "age")
+      ,outputDf //.select("name", "age")
     )
   }
 

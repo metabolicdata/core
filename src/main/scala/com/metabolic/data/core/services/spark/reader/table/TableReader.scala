@@ -4,6 +4,7 @@ import com.metabolic.data.core.services.spark.reader.DataframeUnifiedReader
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import scala.util.Random
 
+@Deprecated
 class TableReader(fqn : String, enableJDBC: Boolean, queryOutputLocation: String) extends DataframeUnifiedReader {
 
   override val input_identifier: String = fqn

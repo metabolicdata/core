@@ -3,6 +3,7 @@ package com.metabolic.data.mapper.app
 import com.amazonaws.regions.Regions
 import com.metabolic.data.core.services.spark.partitioner.{DatePartitioner, Repartitioner, SchemaManagerPartitioner}
 import com.metabolic.data.core.services.spark.transformations.FlattenTransform
+import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import com.metabolic.data.core.services.spark.writer.partitioned_file._
 import com.metabolic.data.core.services.spark.writer.stream.KafkaWriter
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
@@ -95,7 +96,11 @@ object MetabolicWriter extends Logging {
           fileSink.path
         }
 
-        val fileWriteMode = if(historical) { WriteMode.Overwrite} else { fileSink.writeMode }
+        val fileWriteMode = if (historical) {
+          WriteMode.Overwrite
+        } else {
+          fileSink.writeMode
+        }
 
         val repartitioner = prepareSink(sink)(_df.sparkSession)
 
@@ -120,6 +125,13 @@ object MetabolicWriter extends Logging {
               .write(_output, mode)
 
         }
+      }
+      case table: TableSink => {
+        logger.info(s"Writing Iceberg/Table sink ${table.catalog}")
+
+        new IcebergWriter(table.catalog, table.writeMode, checkpointPath)
+          .write(_df, mode)
+
       }
     }
   }
