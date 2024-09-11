@@ -8,5 +8,6 @@ object WriteMode extends Enumeration {
   val Upsert = Value("upsert")
   val Update = Value("update")
   val Delete = Value("delete")
+  val Complete = Value("complete")
 
 }

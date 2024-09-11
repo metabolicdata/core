@@ -47,26 +47,6 @@ class IcebergWriterTest extends AnyFunSuite
     StructField("date", StringType, true),
   )
 
-  test("Iceberg batch overwrite") {
-
-    val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(inputData),
-      StructType(someSchema)
-    )
-
-    val fqn = "local.data_lake.letters_overwrite"
-    val wm = WriteMode.Overwrite
-    val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
-
-    iceberg.write(inputDF, EngineMode.Batch)
-
-    val outputDf = spark.table(fqn)
-
-    assertDataFrameNoOrderEquals(inputDF, outputDf)
-
-  }
-
   test("Iceberg batch append") {
 
     new Directory(new File("./warehouse/data_lake/letters_append")).deleteRecursively()
@@ -89,6 +69,28 @@ class IcebergWriterTest extends AnyFunSuite
     val expectedDf = inputDF.union(inputDF)
 
     assertDataFrameNoOrderEquals(expectedDf, outputDf)
+
+  }
+
+  test("Iceberg batch overwrite") {
+
+    new Directory(new File("./warehouse/data_lake/letters_append")).deleteRecursively()
+
+    val inputDF = spark.createDataFrame(
+      spark.sparkContext.parallelize(inputData),
+      StructType(someSchema)
+    )
+
+    val fqn = "local.data_lake.letters_overwrite"
+    val wm = WriteMode.Overwrite
+    val cpl = ""
+    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+
+    iceberg.write(inputDF, EngineMode.Batch)
+
+    val outputDf = spark.table(fqn)
+
+    assertDataFrameNoOrderEquals(inputDF, outputDf)
 
   }
 
@@ -133,6 +135,11 @@ class IcebergWriterTest extends AnyFunSuite
 
     val outputDf = spark.table(outputTableFqn)
     assertDataFrameNoOrderEquals(inputDF, outputDf)
+  }
+
+  //TODO: fill this test
+  ignore("Iceberg streaming complete") {
+
   }
 
 

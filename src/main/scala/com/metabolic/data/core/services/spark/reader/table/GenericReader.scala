@@ -12,7 +12,16 @@ class GenericReader(fqn: String) extends DataframeUnifiedReader {
   }
 
   override def readStream(spark: SparkSession): DataFrame = {
-    spark.readStream.table(input_identifier)
+    //TODO: addformat delta readstream
+    //spark.readStream.table(input_identifier)
+
+    val streamStartTimestamp = System.currentTimeMillis() - 3600000 // 1 hour ago
+
+    //format iceberg
+    spark.readStream
+      .format("iceberg")
+      .option("stream-from-timestamp", streamStartTimestamp.toString)
+      .load(input_identifier)
   }
 
 }

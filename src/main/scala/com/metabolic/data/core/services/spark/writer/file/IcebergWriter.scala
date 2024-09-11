@@ -4,7 +4,7 @@ import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
-import org.apache.spark.sql.{AnalysisException, DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.util.concurrent.TimeUnit
 
@@ -33,9 +33,15 @@ class IcebergWriter(
         .saveAsTable(output_identifier)
 
       case WriteMode.Upsert =>
-        throw new NotImplementedError("Batch Upsert is not supported by Iceberg yet")
-    }
+        throw new NotImplementedError("Batch Upsert is not supported in Iceberg yet")
 
+      case WriteMode.Delete =>
+        throw new NotImplementedError("Delete is not supported in Iceberg yet")
+
+      case WriteMode.Update =>
+        throw new NotImplementedError("Update is not supported in Iceberg yet")
+
+    }
   }
 
   override def writeStream(df: DataFrame): StreamingQuery = {
@@ -50,11 +56,15 @@ class IcebergWriter(
           .option("checkpointLocation", checkpointLocation)
           .toTable(output_identifier)
 
-      case WriteMode.Overwrite =>
-        throw new NotImplementedError("Streaming Overwrite is not supported by Iceberg yet")
+      case WriteMode.Complete =>
+        df
+          .writeStream
+          .format("iceberg")
+          .outputMode("complete")
+          .trigger(Trigger.ProcessingTime(1, TimeUnit.SECONDS))
+          .option("checkpointLocation", checkpointLocation)
+          .toTable(output_identifier)
 
-      case WriteMode.Upsert =>
-        throw new NotImplementedError("Streaming Upsert is not supported by Iceberg yet")
     }
   }
 
