@@ -46,9 +46,10 @@ class GenericReaderTest extends AnyFunSuite
     .set("spark.databricks.delta.retentionDurationCheck.enabled","false")
     .set("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
     .set("spark.sql.catalog.local.type", "hadoop")
-    .set("spark.sql.catalog.local.warehouse", "src/test/tmp/it_formats")
+    .set("spark.sql.catalog.local.warehouse", "src/test/tmp/gr_test/catalog")
     .set("spark.sql.defaultCatalog", "spark_catalog")
 
+  val testDir = "src/test/tmp/gr_test"
 
   test("Iceberg batch read") {
 
@@ -78,9 +79,7 @@ class GenericReaderTest extends AnyFunSuite
 
   test("Iceberg stream read") {
 
-    new Directory(new File("./warehouse/data_lake/letters")).deleteRecursively()
-    new Directory(new File("src/test/tmp/checkpoints")).deleteRecursively()
-    new Directory(new File("src/test/tmp/parquet")).deleteRecursively()
+    new Directory(new File(testDir)).deleteRecursively()
 
     val fqn = "local.data_lake.letters"
 
@@ -98,21 +97,21 @@ class GenericReaderTest extends AnyFunSuite
     val iceberg = new GenericReader(fqn)
     val inputDf = iceberg.read(spark, EngineMode.Stream)
 
-    val checkpointPath = "src/test/tmp/checkpoints"
+    val checkpointPath = testDir + "checkpoints"
 
     val query = inputDf.writeStream
       .format("parquet") // or "csv", "json", etc.
       .outputMode("append") // Ensure the output mode is correct for your use case
       .trigger(Trigger.Once()) // Process only one batch
       .option("checkpointLocation", checkpointPath)
-      .option("path", "src/test/tmp/parquet") // Specify the output path for the file
+      .option("path", testDir + "letters") // Specify the output path for the file
       .start()
 
     query.awaitTermination()
 
     val df = spark.read
       .format("parquet")
-      .load("src/test/tmp/parquet")
+      .load(testDir + "letters")
 
     assertDataFrameEquals(df, expectedDf)
 
