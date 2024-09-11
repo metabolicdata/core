@@ -3,8 +3,10 @@ package com.metabolic.data.core.services.spark.writer.file
 import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
-import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import org.apache.spark.sql.{AnalysisException, DataFrame, Row, SparkSession}
+
+import java.util.concurrent.TimeUnit
 
 class IcebergWriter(
                      val fqn: String,
@@ -19,10 +21,10 @@ class IcebergWriter(
 
     writeMode match {
       case WriteMode.Append => df
-          .write
-          .format("iceberg")
-          .mode("append")
-          .saveAsTable(output_identifier)
+        .write
+        .format("iceberg")
+        .mode("append")
+        .saveAsTable(output_identifier)
 
       case WriteMode.Overwrite => df
         .write
@@ -44,6 +46,7 @@ class IcebergWriter(
           .writeStream
           .format("iceberg")
           .outputMode("append")
+          .trigger(Trigger.ProcessingTime(1, TimeUnit.SECONDS))
           .option("checkpointLocation", checkpointLocation)
           .toTable(output_identifier)
 

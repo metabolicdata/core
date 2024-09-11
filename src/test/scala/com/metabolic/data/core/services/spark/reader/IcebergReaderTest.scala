@@ -65,8 +65,9 @@ class IcebergReaderTest extends AnyFunSuite
     assertDataFrameEquals(inputDf, expectedDf)
   }
 
+  //TODO: Implement this test
   ignore("Iceberg stream read") {
-    //TODO: Implement this test
+
   }
 
 }

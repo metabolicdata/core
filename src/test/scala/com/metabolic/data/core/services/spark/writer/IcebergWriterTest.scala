@@ -3,7 +3,7 @@ package com.metabolic.data.core.services.spark.writer
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{Row, SaveMode}
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
@@ -47,7 +47,7 @@ class IcebergWriterTest extends AnyFunSuite
     StructField("date", StringType, true),
   )
 
-  test("Iceberg overwrite") {
+  test("Iceberg batch overwrite") {
 
     val inputDF = spark.createDataFrame(
       spark.sparkContext.parallelize(inputData),
@@ -57,7 +57,7 @@ class IcebergWriterTest extends AnyFunSuite
     val fqn = "local.data_lake.letters_overwrite"
     val wm = WriteMode.Overwrite
     val cpl = ""
-   val iceberg =  new IcebergWriter(fqn, wm, cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
 
@@ -65,10 +65,9 @@ class IcebergWriterTest extends AnyFunSuite
 
     assertDataFrameNoOrderEquals(inputDF, outputDf)
 
-
   }
 
-  test("Iceberg append") {
+  test("Iceberg batch append") {
 
     new Directory(new File("./warehouse/data_lake/letters_append")).deleteRecursively()
 
@@ -80,7 +79,7 @@ class IcebergWriterTest extends AnyFunSuite
     val fqn = "local.data_lake.letters_append"
     val wm = WriteMode.Append
     val cpl = ""
-    val iceberg =  new IcebergWriter(fqn, wm, cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(inputDF, EngineMode.Batch)
@@ -91,13 +90,50 @@ class IcebergWriterTest extends AnyFunSuite
 
     assertDataFrameNoOrderEquals(expectedDf, outputDf)
 
-
   }
 
-  ignore("Iceberg stream  append") {
-    //TODO: Implement this test
-  }
+  //TODO: Implement this test using Kafka
+  ignore("Iceberg streaming append") {
 
+    new Directory(new File("./warehouse/data_lake/letters_input")).deleteRecursively()
+    new Directory(new File("./warehouse/data_lake/letters_output")).deleteRecursively()
+
+    val inputDF = spark.createDataFrame(
+      spark.sparkContext.parallelize(inputData),
+      StructType(someSchema)
+    )
+
+    val emptyDF = spark.createDataFrame(
+      spark.sparkContext.emptyRDD[Row],
+      StructType(someSchema)
+    )
+
+    val inputTableFqn = "local.data_lake.letters_input"
+    val outputTableFqn = "local.data_lake.letters_output"
+    val wm = WriteMode.Append
+    val cpl = "./warehouse/_checkpoint"
+
+    inputDF.write
+      .format("iceberg")
+      .mode("overwrite")
+      .saveAsTable(inputTableFqn)
+
+    emptyDF.write
+      .format("iceberg")
+      .mode("overwrite")
+      .saveAsTable(outputTableFqn)
+
+    val streamingInputDF = spark.readStream
+      .format("iceberg")
+      .option("path", inputTableFqn) // Specify the input Iceberg table path
+      .load()
+
+    val iceberg = new IcebergWriter(outputTableFqn, wm, cpl)(spark)
+    iceberg.write(streamingInputDF, EngineMode.Stream)
+
+    val outputDf = spark.table(outputTableFqn)
+    assertDataFrameNoOrderEquals(inputDF, outputDf)
+  }
 
 
 }
