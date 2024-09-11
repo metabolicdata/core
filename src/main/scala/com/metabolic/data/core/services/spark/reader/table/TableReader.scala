@@ -20,6 +20,7 @@ class TableReader(fqn : String, enableJDBC: Boolean, queryOutputLocation: String
         .option("S3OutputLocation", s"${queryOutputLocation}/${input_identifier}-${Random.nextInt(100000)}")
         .load()
     }else {
+      // Read table from catalog
       spark.read
         .table(input_identifier)
     }

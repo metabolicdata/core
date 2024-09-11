@@ -12,6 +12,7 @@ import org.apache.spark.sql.types._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import com.metabolic.data.mapper.domain.ops.source._
+import org.apache.derby.impl.sql.compile.TableName
 
 class MetabolicReaderIT extends AnyFunSuite
   with DataFrameSuiteBase
@@ -32,8 +33,6 @@ class MetabolicReaderIT extends AnyFunSuite
     .set("spark.sql.defaultCatalog", "spark_catalog")
 
   def getFakeEmployeesDataframe(): DataFrame = {
-
-    val sqlCtx = sqlContext
 
     val fakeEmployeesData = Seq(
       Row("Marc", 33L, 1),
@@ -170,14 +169,20 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val result = spark.table(tableName)
 
+
+    print("hola")
+    print(result.toString())
+    print(MetabolicReader.read(source, historical = true, EngineMode.Batch, enableJDBC = false, "", "")(spark))
+
     assertDataFrameNoOrderEquals(expected, result)
 
   }
 
-  test("Reader Table Batch") {
+  test("Reader Table Iceberg Batch") {
 
-    val fqn = "local.data_lake.fake_employee_delta"
+    val catalog = "local.data_lake"
     val tableName = "fake_employee_delta"
+    val fqn = catalog + "." + tableName
 
     val expected = getFakeEmployeesDataframe()
 
@@ -197,5 +202,38 @@ class MetabolicReaderIT extends AnyFunSuite
 
   }
 
+  // This test is not doing a full comparison
+  ignore("Reader Table Delta Batch") {
+
+    val inputPath = "src/test/tmp/fake_employee_delta"
+    val catalog = "default"
+    val tableName = "fake_employee_delta"
+
+    val expected = getFakeEmployeesDataframe()
+
+    expected
+      .write
+      .format("delta")
+      .mode("overwrite")
+      .option("mergeSchema", "true")
+      .save(inputPath)
+
+    spark.sql(s"""
+      CREATE TABLE default.fake_employee_delta
+      USING DELTA
+      LOCATION '$inputPath'
+    """)
+
+    val fqn = catalog + "." + tableName
+
+    val source = TableSource(fqn,tableName)
+
+    MetabolicReader.read(source, historical = true, EngineMode.Batch, enableJDBC = false, "", "")(spark)
+
+    val result = spark.table(fqn)
+
+    assertDataFrameNoOrderEquals(expected, result)
+
+  }
 
 }

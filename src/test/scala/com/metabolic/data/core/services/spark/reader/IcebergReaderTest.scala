@@ -1,7 +1,7 @@
 package com.metabolic.data.core.services.spark.reader
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
-import com.metabolic.data.core.services.spark.reader.table.IcebergReader
+import com.metabolic.data.core.services.spark.reader.table.GenericReader
 import com.metabolic.data.mapper.domain.io.EngineMode
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.Row
@@ -59,7 +59,7 @@ class IcebergReaderTest extends AnyFunSuite
       .mode("overwrite")
       .saveAsTable(fqn)
 
-    val iceberg = new IcebergReader(fqn)
+    val iceberg = new GenericReader(fqn)
     val inputDf = iceberg.read(spark, EngineMode.Batch)
 
     assertDataFrameEquals(inputDf, expectedDf)

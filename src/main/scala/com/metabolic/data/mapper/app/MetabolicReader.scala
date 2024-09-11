@@ -3,7 +3,7 @@ package com.metabolic.data.mapper.app
 import com.metabolic.data.core.services.spark.filter.{DateComponentsFromReader, DateComponentsUpToReader, DateFieldFromReader, DateFieldUpToReader}
 import com.metabolic.data.core.services.spark.reader.file.{CSVReader, DeltaReader, JSONReader, ParquetReader}
 import com.metabolic.data.core.services.spark.reader.stream.KafkaReader
-import com.metabolic.data.core.services.spark.reader.table.{IcebergReader, TableReader}
+import com.metabolic.data.core.services.spark.reader.table.{GenericReader, TableReader}
 import com.metabolic.data.core.services.spark.transformations._
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
@@ -16,7 +16,7 @@ object MetabolicReader extends Logging {
 
  def read(source: Source, historical: Boolean, mode: EngineMode, enableJDBC: Boolean, queryOutputLocation: String, jobName: String)(implicit spark: SparkSession) = {
 
-  val input = readSource(source, mode, spark, enableJDBC, queryOutputLocation, jobName)
+  val input: DataFrame = readSource(source, mode, spark, enableJDBC, queryOutputLocation, jobName)
 
   val prepared = prepareSource(source, historical, input)
 
@@ -47,10 +47,11 @@ object MetabolicReader extends Logging {
    }
 
    case table: TableSource => {
-    logger.info(s"Reading source ${table.fqn} already in metastore")
+    logger.info(s"Reading table source ${table.fqn}")
 
-    //TODO: reader repending of type of table
-    new IcebergReader(table.fqn).read(spark, mode)
+    //TODO: reader depending of type of table
+    new GenericReader(table.fqn).read(spark, mode)
+
    }
 
    case streamSource: StreamSource => {
