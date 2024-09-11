@@ -18,13 +18,13 @@ class FileFormatsIT extends AnyFunSuite
   with RegionedTest {
 
   override def conf: SparkConf = super.conf
-    .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-    .set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
+    .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,io.delta.sql.DeltaSparkSessionExtension")
+    .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
     .set("spark.sql.catalog.spark_catalog.type", "hive")
     .set("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
     .set("spark.sql.catalog.local.type", "hadoop")
     .set("spark.sql.catalog.local.warehouse", "src/test/tmp/it_formats")
-    .set("spark.sql.defaultCatalog", "local")
+    .set("spark.sql.defaultCatalog", "spark_catalog")
 
   test("Write parquet") {
 
@@ -134,7 +134,7 @@ class FileFormatsIT extends AnyFunSuite
       StructType(someSchema)
     )
 
-    inputEmployeesDF.write.saveAsTable("fake_json_employees")
+    inputEmployeesDF.write.mode("overwrite").saveAsTable("fake_json_employees")
 
     print(spark.catalog.tableExists("fake_json_employees"))
 

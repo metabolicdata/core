@@ -27,15 +27,6 @@ object MetabolicReader extends Logging {
  private def readSource(source: Source, mode: EngineMode, spark: SparkSession, enableJDBC: Boolean, queryOutputLocation: String, jobName: String) = {
   source match {
 
-   case streamSource: StreamSource => {
-    logger.info(s"Reading stream source ${streamSource.name} from ${streamSource.topic}")
-
-    streamSource.format match {
-     case IOFormat.KAFKA => new KafkaReader(streamSource.servers, streamSource.key, streamSource.secret, streamSource.topic, jobName)
-       .read(spark, mode)
-    }
-   }
-
    case fileSource: FileSource => {
     logger.info(s"Reading file source ${fileSource.name} from ${fileSource.inputPath}")
 
@@ -55,11 +46,22 @@ object MetabolicReader extends Logging {
     }
    }
 
-   case meta: TableSource => {
-    logger.info(s"Reading source ${meta.fqn} already in metastore")
+   case table: TableSource => {
+    logger.info(s"Reading source ${table.fqn} already in metastore")
 
-    new IcebergReader(meta.fqn).read(spark, mode)
+    //TODO: reader repending of type of table
+    new IcebergReader(table.fqn).read(spark, mode)
    }
+
+   case streamSource: StreamSource => {
+    logger.info(s"Reading stream source ${streamSource.name} from ${streamSource.topic}")
+
+    streamSource.format match {
+     case IOFormat.KAFKA => new KafkaReader(streamSource.servers, streamSource.key, streamSource.secret, streamSource.topic, jobName)
+       .read(spark, mode)
+    }
+   }
+
   }
  }
 

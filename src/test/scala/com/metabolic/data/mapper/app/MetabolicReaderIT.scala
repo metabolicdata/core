@@ -11,7 +11,7 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
-
+import com.metabolic.data.mapper.domain.ops.source._
 
 class MetabolicReaderIT extends AnyFunSuite
   with DataFrameSuiteBase
@@ -20,11 +20,16 @@ class MetabolicReaderIT extends AnyFunSuite
   with RegionedTest {
 
   override def conf: SparkConf = super.conf
-    .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+    .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,io.delta.sql.DeltaSparkSessionExtension")
     .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .set("spark.sql.catalog.spark_catalog.type", "hive")
     .set("spark.databricks.delta.optimize.repartition.enabled","true")
     .set("spark.databricks.delta.vacuum.parallelDelete.enabled","true")
     .set("spark.databricks.delta.retentionDurationCheck.enabled","false")
+    .set("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
+    .set("spark.sql.catalog.local.type", "hadoop")
+    .set("spark.sql.catalog.local.warehouse", "src/test/tmp/it_formats")
+    .set("spark.sql.defaultCatalog", "spark_catalog")
 
   def getFakeEmployeesDataframe(): DataFrame = {
 
@@ -160,6 +165,29 @@ class MetabolicReaderIT extends AnyFunSuite
       .save(inputPath)
 
     val source = getFileSource(inputPath, tableName, IOFormat.DELTA.toString).head
+
+    MetabolicReader.read(source, historical = true, EngineMode.Batch, enableJDBC = false, "", "")(spark)
+
+    val result = spark.table(tableName)
+
+    assertDataFrameNoOrderEquals(expected, result)
+
+  }
+
+  test("Reader Table Batch") {
+
+    val fqn = "local.data_lake.fake_employee_delta"
+    val tableName = "fake_employee_delta"
+
+    val expected = getFakeEmployeesDataframe()
+
+    expected
+      .write
+      .format("iceberg")
+      .mode("overwrite")
+      .saveAsTable(fqn)
+
+    val source = TableSource(fqn,tableName)
 
     MetabolicReader.read(source, historical = true, EngineMode.Batch, enableJDBC = false, "", "")(spark)
 
