@@ -49,7 +49,7 @@ class GenericReaderTest extends AnyFunSuite
     .set("spark.sql.catalog.local.warehouse", "src/test/tmp/gr_test/catalog")
     .set("spark.sql.defaultCatalog", "spark_catalog")
 
-  val testDir = "src/test/tmp/gr_test"
+  val testDir = "src/test/tmp/gr_test/"
 
   test("Iceberg batch read") {
 
@@ -109,11 +109,11 @@ class GenericReaderTest extends AnyFunSuite
 
     query.awaitTermination()
 
-    val df = spark.read
+    val resultDf = spark.read
       .format("parquet")
       .load(testDir + "letters")
 
-    assertDataFrameEquals(df, expectedDf)
+    assertDataFrameEquals(expectedDf, resultDf)
 
   }
 

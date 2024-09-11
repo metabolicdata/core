@@ -1,6 +1,7 @@
 package com.metabolic.data.core.services.spark.writer
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
+import com.metabolic.data.core.services.spark.reader.table.GenericReader
 import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Row, SaveMode}
@@ -8,6 +9,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
+import org.apache.spark.sql.streaming.Trigger
 
 import java.io.File
 import scala.reflect.io.Directory
@@ -46,6 +48,8 @@ class IcebergWriterTest extends AnyFunSuite
     StructField("dd", IntegerType, true),
     StructField("date", StringType, true),
   )
+
+  val testDir = "src/test/tmp/iw_test/"
 
   test("Iceberg batch append") {
 
@@ -94,47 +98,38 @@ class IcebergWriterTest extends AnyFunSuite
 
   }
 
-  //TODO: Implement this test using Kafka
-  ignore("Iceberg streaming append") {
+  test("Iceberg streaming append"){
 
-    new Directory(new File("./warehouse/data_lake/letters_input")).deleteRecursively()
-    new Directory(new File("./warehouse/data_lake/letters_output")).deleteRecursively()
+    new Directory(new File(testDir)).deleteRecursively()
+    new Directory(new File("./warehouse/data_lake")).deleteRecursively()
 
-    val inputDF = spark.createDataFrame(
+    val expected = "local.data_lake.letters"
+    val result = "local.data_lake.letters_result"
+
+    val expectedDf = spark.createDataFrame(
       spark.sparkContext.parallelize(inputData),
       StructType(someSchema)
     )
 
-    val emptyDF = spark.createDataFrame(
-      spark.sparkContext.emptyRDD[Row],
-      StructType(someSchema)
-    )
+    expectedDf
+      .write
+      .format("iceberg")
+      .mode("append")
+      .saveAsTable(expected)
 
-    val inputTableFqn = "local.data_lake.letters_input"
-    val outputTableFqn = "local.data_lake.letters_output"
+    val streamStartTimestamp = System.currentTimeMillis() - 3600000 // 1 hour ago
+    val streamDf = spark.readStream
+      .format("iceberg")
+      .option("stream-from-timestamp", streamStartTimestamp.toString)
+      .load(expected)
+
     val wm = WriteMode.Append
-    val cpl = "./warehouse/_checkpoint"
+    val cpl = testDir + "checkpoints"
+    val iceberg = new IcebergWriter(result, wm, cpl)(spark)
+    iceberg.write(streamDf, EngineMode.Stream)
 
-    inputDF.write
-      .format("iceberg")
-      .mode("overwrite")
-      .saveAsTable(inputTableFqn)
+    assertDataFrameNoOrderEquals(spark.table(expected),spark.table(result))
 
-    emptyDF.write
-      .format("iceberg")
-      .mode("overwrite")
-      .saveAsTable(outputTableFqn)
-
-    val streamingInputDF = spark.readStream
-      .format("iceberg")
-      .option("path", inputTableFqn) // Specify the input Iceberg table path
-      .load()
-
-    val iceberg = new IcebergWriter(outputTableFqn, wm, cpl)(spark)
-    iceberg.write(streamingInputDF, EngineMode.Stream)
-
-    val outputDf = spark.table(outputTableFqn)
-    assertDataFrameNoOrderEquals(inputDF, outputDf)
   }
 
   //TODO: fill this test
