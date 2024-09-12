@@ -93,10 +93,6 @@ class GenericReaderTest extends AnyFunSuite
     val delta = new GenericReader(fqn)
     val resultDf = delta.read(spark, EngineMode.Batch)
 
-    print("comparison:")
-    expectedDf.show()
-    resultDf.show()
-
     val sortedExpectedDf = expectedDf.orderBy("name")
     val sortedResultDf = resultDf.orderBy("name")
 
@@ -143,9 +139,47 @@ class GenericReaderTest extends AnyFunSuite
 
   }
 
-  //TODO: Implement this test
-  ignore("Delta stream read") {
+  test("Delta stream read") {
 
+    new Directory(new File(testDir)).deleteRecursively()
+
+    val fqn = "data_lake.letters"
+    spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
+
+    val expectedDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(expectedSchema)
+    )
+
+    expectedDf
+      .write
+      .format("delta")
+      .mode("overwrite")
+      .saveAsTable(fqn)
+
+    val delta = new GenericReader(fqn)
+    val inputDf = delta.read(spark, EngineMode.Stream)
+
+    val checkpointPath = testDir + "checkpoints"
+
+    val query = inputDf.writeStream
+      .format("parquet") // or "csv", "json", etc.
+      .outputMode("append") // Ensure the output mode is correct for your use case
+      .trigger(Trigger.Once()) // Process only one batch
+      .option("checkpointLocation", checkpointPath)
+      .option("path", testDir + "letters") // Specify the output path for the file
+      .start()
+
+    query.awaitTermination()
+
+    val resultDf = spark.read
+      .format("parquet")
+      .load(testDir + "letters")
+
+    val sortedExpectedDf = expectedDf.orderBy("name")
+    val sortedResultDf = resultDf.orderBy("name")
+
+    assertDataFrameEquals(sortedExpectedDf, sortedResultDf)
   }
 
 }
