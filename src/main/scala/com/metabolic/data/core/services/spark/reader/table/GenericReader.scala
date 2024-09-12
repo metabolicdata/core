@@ -36,7 +36,6 @@ class GenericReader(fqn: String) extends DataframeUnifiedReader with Logging{
 
       case "delta" =>
         logger.info(s"Reading Delta Table source $input_identifier")
-        //TODO: add format delta readstream
         spark.readStream
           .format("delta")
           .table(input_identifier)

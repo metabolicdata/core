@@ -4,9 +4,9 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.reader.table.GenericReader
 import com.metabolic.data.mapper.domain.io.EngineMode
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.streaming.Trigger
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -28,6 +28,7 @@ class GenericReaderTest extends AnyFunSuite
     Row("G", "g", 2021, 2, 2, "2021-02-02"),
     Row("H", "h", 2020, 2, 5, "2020-02-05")
   )
+
   private val expectedSchema = List(
     StructField("name", StringType, true),
     StructField("data", StringType, true),
@@ -51,15 +52,24 @@ class GenericReaderTest extends AnyFunSuite
 
   val testDir = "src/test/tmp/gr_test/"
 
-  test("Iceberg batch read") {
-
-    val fqn = "local.data_lake.letters"
-
-    val expectedDf = spark.createDataFrame(
+  private def createExpectedDataFrame(): DataFrame = {
+    spark.createDataFrame(
       spark.sparkContext.parallelize(expectedData),
       StructType(expectedSchema)
     )
+  }
 
+  private def cleanUpTestDir(): Unit = {
+    new Directory(new File(testDir)).deleteRecursively()
+  }
+
+  test("Iceberg batch read") {
+
+    cleanUpTestDir()
+
+    val fqn = "local.data_lake.letters"
+
+    val expectedDf = createExpectedDataFrame()
     expectedDf
       .write
       .format("iceberg")
@@ -74,21 +84,17 @@ class GenericReaderTest extends AnyFunSuite
 
   test("Delta batch read") {
 
+    cleanUpTestDir()
+
     val fqn = "data_lake.letters"
     spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
 
-    val expectedDf = spark.createDataFrame(
-      spark.sparkContext.parallelize(expectedData),
-      StructType(expectedSchema)
-    )
-
+    val expectedDf = createExpectedDataFrame()
     expectedDf
       .write
       .format("delta")
       .mode("overwrite")
       .saveAsTable(fqn)
-
-    val tableDf = spark.table(fqn)
 
     val delta = new GenericReader(fqn)
     val resultDf = delta.read(spark, EngineMode.Batch)
@@ -101,15 +107,12 @@ class GenericReaderTest extends AnyFunSuite
 
   test("Iceberg stream read") {
 
-    new Directory(new File(testDir)).deleteRecursively()
+    cleanUpTestDir()
 
-    val fqn = "local.data_lake.letters"
+    val fqn = "local.data_lake.letters_stream"
+    val table = "letters_stream"
 
-    val expectedDf = spark.createDataFrame(
-      spark.sparkContext.parallelize(expectedData),
-      StructType(expectedSchema)
-    )
-
+    val expectedDf = createExpectedDataFrame()
     expectedDf
       .write
       .format("iceberg")
@@ -126,14 +129,14 @@ class GenericReaderTest extends AnyFunSuite
       .outputMode("append") // Ensure the output mode is correct for your use case
       .trigger(Trigger.Once()) // Process only one batch
       .option("checkpointLocation", checkpointPath)
-      .option("path", testDir + "letters") // Specify the output path for the file
+      .option("path", testDir + table) // Specify the output path for the file
       .start()
 
     query.awaitTermination()
 
     val resultDf = spark.read
       .format("parquet")
-      .load(testDir + "letters")
+      .load(testDir + table)
 
     assertDataFrameEquals(expectedDf, resultDf)
 
@@ -141,16 +144,16 @@ class GenericReaderTest extends AnyFunSuite
 
   test("Delta stream read") {
 
+    cleanUpTestDir()
+
     new Directory(new File(testDir)).deleteRecursively()
 
-    val fqn = "data_lake.letters"
-    spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
+    val fqn = "data_lake.letters_stream"
+    val table = "letters_stream"
 
-    val expectedDf = spark.createDataFrame(
-      spark.sparkContext.parallelize(expectedData),
-      StructType(expectedSchema)
-    )
+    spark.sql(s"CREATE DATABASE IF NOT EXISTS ${table}")
 
+    val expectedDf = createExpectedDataFrame()
     expectedDf
       .write
       .format("delta")
@@ -167,14 +170,13 @@ class GenericReaderTest extends AnyFunSuite
       .outputMode("append") // Ensure the output mode is correct for your use case
       .trigger(Trigger.Once()) // Process only one batch
       .option("checkpointLocation", checkpointPath)
-      .option("path", testDir + "letters") // Specify the output path for the file
+      .option("path", testDir + table) // Specify the output path for the file
       .start()
-
     query.awaitTermination()
 
     val resultDf = spark.read
       .format("parquet")
-      .load(testDir + "letters")
+      .load(testDir + table)
 
     val sortedExpectedDf = expectedDf.orderBy("name")
     val sortedResultDf = resultDf.orderBy("name")
