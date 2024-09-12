@@ -136,8 +136,6 @@ class FileFormatsIT extends AnyFunSuite
 
     inputEmployeesDF.write.mode("overwrite").saveAsTable("fake_json_employees")
 
-    print(spark.catalog.tableExists("fake_json_employees"))
-
     val multilineSQL = "select name, cast(age as string) as new_age from employees"
 
     val testingConfig = Config(

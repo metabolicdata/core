@@ -169,11 +169,6 @@ class MetabolicReaderIT extends AnyFunSuite
 
     val result = spark.table(tableName)
 
-
-    print("hola")
-    print(result.toString())
-    print(MetabolicReader.read(source, historical = true, EngineMode.Batch, enableJDBC = false, "", "")(spark))
-
     assertDataFrameNoOrderEquals(expected, result)
 
   }
