@@ -72,9 +72,35 @@ class GenericReaderTest extends AnyFunSuite
     assertDataFrameEquals(inputDf, expectedDf)
   }
 
-  //TODO: Implement this test
-  ignore("Delta batch read") {
+  test("Delta batch read") {
 
+    val fqn = "data_lake.letters"
+    spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
+
+    val expectedDf = spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(expectedSchema)
+    )
+
+    expectedDf
+      .write
+      .format("delta")
+      .mode("overwrite")
+      .saveAsTable(fqn)
+
+    val tableDf = spark.table(fqn)
+
+    val delta = new GenericReader(fqn)
+    val resultDf = delta.read(spark, EngineMode.Batch)
+
+    print("comparison:")
+    expectedDf.show()
+    resultDf.show()
+
+    val sortedExpectedDf = expectedDf.orderBy("name")
+    val sortedResultDf = resultDf.orderBy("name")
+
+    assertDataFrameEquals(sortedExpectedDf, sortedResultDf)
   }
 
   test("Iceberg stream read") {
