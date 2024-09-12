@@ -34,12 +34,15 @@ object MetabolicReader extends Logging {
      case IOFormat.CSV =>
       new CSVReader(fileSource.inputPath)
         .read(spark, mode)
+
      case IOFormat.JSON =>
       new JSONReader(fileSource.inputPath, fileSource.useStringPrimitives)
         .read(spark, mode)
+
      case IOFormat.PARQUET =>
       new ParquetReader(fileSource.inputPath)
         .read(spark, mode)
+
      case IOFormat.DELTA =>
       new DeltaReader(fileSource.inputPath)
         .read(spark, mode)
