@@ -52,7 +52,7 @@ class IcebergWriter(
           .writeStream
           .format("iceberg")
           .outputMode("append")
-          .trigger(Trigger.ProcessingTime(1, TimeUnit.SECONDS))
+          .trigger(Trigger.ProcessingTime(1, TimeUnit.MINUTES))
           .option("checkpointLocation", checkpointLocation)
           .toTable(output_identifier)
 
@@ -68,11 +68,13 @@ class IcebergWriter(
     }
   }
 
-  override def postHook(df: DataFrame, query: Seq[StreamingQuery]): Unit = {
-
-    if (query.isEmpty) {
-      spark.sql(s"CALL local.system.rewrite_data_files('$output_identifier')")
-    }
-  }
+//TODO: do we need to do any specific post write operations in Iceberg?
+//
+//  override def postHook(df: DataFrame, query: Seq[StreamingQuery]): Unit = {
+//
+//    if (query.isEmpty) {
+//      spark.sql(s"CALL local.system.rewrite_data_files('$output_identifier')")
+//    }
+//  }
 
 }
