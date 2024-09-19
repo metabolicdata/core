@@ -16,9 +16,10 @@ libraryDependencies ++= Seq(
 
   "io.delta" %% "delta-core" % "2.3.0",
   "org.apache.iceberg" %% "iceberg-spark-runtime-3.3" % "1.6.1",
+  "org.apache.iceberg" % "iceberg-aws-bundle" % "1.6.1",
 
 
-"org.apache.logging.log4j" %% "log4j-api-scala" % "12.0",
+  "org.apache.logging.log4j" %% "log4j-api-scala" % "12.0",
   "com.typesafe" % "config" % "1.4.0",
 
   "net.liftweb" %% "lift-json" % "3.5.0",
