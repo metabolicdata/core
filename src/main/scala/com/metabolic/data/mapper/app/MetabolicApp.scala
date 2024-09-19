@@ -23,6 +23,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
   def run(configPath: String, params: Map[String, String]): Unit = {
 
     implicit val region = Regions.fromName(params("dp.region"))
+    val warehouse = params("dp.warehouse")
 
     val rawConfig = new ConfigReaderService()
       .getConfig(configPath, params)
@@ -33,11 +34,16 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
     implicit val spark = sparkBuilder
       .appName(s" Metabolic Mapper - $configPath")
       .config("spark.sql.sources.partitionOverwriteMode", "dynamic")
-      .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-      .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+      .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,io.delta.sql.DeltaSparkSessionExtension")
+      .config("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
       .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
       .config("spark.databricks.delta.optimize.repartition.enabled", "true")
       .config("spark.databricks.delta.vacuum.parallelDelete.enabled", "true")
+      .config("spark.sql.catalog.spark_catalog.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog")
+      .config("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
+      .config("spark.sql.catalog.spark_catalog.client.region", s"$region")
+      .config("spark.sql.catalog.spark_catalog.warehouse", s"$warehouse")
+      .config("spark.sql.defaultCatalog", "spark_catalog")
       .getOrCreate()
 
     params.get("configJar") match {
