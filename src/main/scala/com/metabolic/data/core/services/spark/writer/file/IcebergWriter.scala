@@ -61,7 +61,7 @@ class IcebergWriter(
           .writeStream
           .format("iceberg")
           .outputMode("complete")
-          .trigger(Trigger.ProcessingTime(1, TimeUnit.SECONDS))
+          .trigger(Trigger.ProcessingTime(1, TimeUnit.MINUTES))
           .option("checkpointLocation", checkpointLocation)
           .toTable(output_identifier)
 

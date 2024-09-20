@@ -4,7 +4,7 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
@@ -17,8 +17,7 @@ class IcebergWriterTest extends AnyFunSuite
   with SharedSparkContext
   with BeforeAndAfterAll {
 
-  val testDir = "src/test/tmp/iw_test/"
-  private val inputData = Seq(
+  private val expectedData = Seq(
     Row("A", "a", 2022, 2, 5, "2022-02-05"),
     Row("B", "b", 2022, 2, 4, "2022-02-04"),
     Row("C", "c", 2022, 2, 3, "2022-02-03"),
@@ -29,7 +28,7 @@ class IcebergWriterTest extends AnyFunSuite
     Row("H", "h", 2020, 2, 5, "2020-02-05")
   )
 
-  private val someSchema = List(
+  private val expectedSchema = List(
     StructField("name", StringType, true),
     StructField("data", StringType, true),
     StructField("yyyy", IntegerType, true),
@@ -38,25 +37,35 @@ class IcebergWriterTest extends AnyFunSuite
     StructField("date", StringType, true),
   )
 
+  val testDir = "./src/test/tmp/iw_test/"
+
   override def conf: SparkConf = super.conf
     .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
     .set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
     .set("spark.sql.catalog.spark_catalog.type", "hive")
     .set("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
     .set("spark.sql.catalog.local.type", "hadoop")
-    .set("spark.sql.catalog.local.warehouse", "./warehouse")
+    .set("spark.sql.catalog.local.warehouse", s"$testDir")
     .set("spark.sql.defaultCatalog", "local")
 
-  test("Iceberg batch append") {
-
-    new Directory(new File("./warehouse/data_lake/letters_append")).deleteRecursively()
-
-    val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(inputData),
-      StructType(someSchema)
+  private def createExpectedDataFrame(): DataFrame = {
+    spark.createDataFrame(
+      spark.sparkContext.parallelize(expectedData),
+      StructType(expectedSchema)
     )
+  }
 
-    val fqn = "local.data_lake.letters_append"
+  private def cleanUpTestDir(): Unit = {
+    new Directory(new File(testDir)).deleteRecursively()
+  }
+
+  test("Iceberg batch append") {
+    cleanUpTestDir()
+    val table = "letters_append"
+    val database = "data_lake"
+    val fqn = s"local.$database.$table"
+    val inputDF = createExpectedDataFrame()
+
     val wm = WriteMode.Append
     val cpl = ""
     val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
@@ -69,19 +78,16 @@ class IcebergWriterTest extends AnyFunSuite
     val expectedDf = inputDF.union(inputDF)
 
     assertDataFrameNoOrderEquals(expectedDf, outputDf)
-
+    cleanUpTestDir()
   }
 
   test("Iceberg batch overwrite") {
+    cleanUpTestDir()
+    val table = "letters_overwrite"
+    val database = "data_lake"
+    val fqn = s"local.$database.$table"
+    val inputDF = createExpectedDataFrame()
 
-    new Directory(new File("./warehouse/data_lake/letters_append")).deleteRecursively()
-
-    val inputDF = spark.createDataFrame(
-      spark.sparkContext.parallelize(inputData),
-      StructType(someSchema)
-    )
-
-    val fqn = "local.data_lake.letters_overwrite"
     val wm = WriteMode.Overwrite
     val cpl = ""
     val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
@@ -91,21 +97,16 @@ class IcebergWriterTest extends AnyFunSuite
     val outputDf = spark.table(fqn)
 
     assertDataFrameNoOrderEquals(inputDF, outputDf)
-
+    cleanUpTestDir()
   }
 
-  ignore("Iceberg streaming append") {
+  test("Iceberg streaming append") {
+    cleanUpTestDir()
+    val database = "data_lake"
+    val expected = s"local.$database.letters"
+    val result = s"local.$database.letters_result"
 
-    new Directory(new File(testDir)).deleteRecursively()
-    new Directory(new File("./warehouse/data_lake")).deleteRecursively()
-
-    val expected = "local.data_lake.letters"
-    val result = "local.data_lake.letters_result"
-
-    val expectedDf = spark.createDataFrame(
-      spark.sparkContext.parallelize(inputData),
-      StructType(someSchema)
-    )
+    val expectedDf = createExpectedDataFrame()
 
     expectedDf
       .write
@@ -119,13 +120,16 @@ class IcebergWriterTest extends AnyFunSuite
       .option("stream-from-timestamp", streamStartTimestamp.toString)
       .load(expected)
 
-    val wm = WriteMode.Complete
+    val wm = WriteMode.Append
     val cpl = testDir + "checkpoints"
     val iceberg = new IcebergWriter(result, wm, cpl)(spark)
     iceberg.write(streamDf, EngineMode.Stream)
 
-    assertDataFrameNoOrderEquals(expectedDf, spark.table(result))
+    //wait for the trigger to complete
+    Thread.sleep(1000)
 
+    assertDataFrameNoOrderEquals(expectedDf, spark.table(result))
+    cleanUpTestDir()
   }
 
   //TODO: fill this test
