@@ -38,19 +38,21 @@ class GenericReaderTest extends AnyFunSuite
     StructField("date", StringType, true),
   )
 
+  val testDir = "./src/test/tmp/gr_test/"
+
   //TODO: check iceberg catalog generalization
   //TODO: use same table for all tests
   override def conf: SparkConf = super.conf
     .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,io.delta.sql.DeltaSparkSessionExtension")
-    .set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
-    .set("spark.sql.catalog.spark_catalog.type", "hadoop")
-    .set("spark.sql.catalog.spark_catalog.warehouse", "src/test/tmp/gr_test/catalog")
+    .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .set("spark.sql.catalog.spark_catalog.type", "hive")
     .set("spark.databricks.delta.optimize.repartition.enabled","true")
     .set("spark.databricks.delta.vacuum.parallelDelete.enabled","true")
     .set("spark.databricks.delta.retentionDurationCheck.enabled","false")
+    .set("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
+    .set("spark.sql.catalog.local.type", "hadoop")
+    .set("spark.sql.catalog.local.warehouse", s"$testDir")
     .set("spark.sql.defaultCatalog", "spark_catalog")
-
-  val testDir = "src/test/tmp/gr_test/"
 
   private def createExpectedDataFrame(): DataFrame = {
     spark.createDataFrame(
@@ -64,13 +66,13 @@ class GenericReaderTest extends AnyFunSuite
   }
 
   test("Iceberg batch read") {
-
     cleanUpTestDir()
-
-    val fqn = "spark_catalog.data_lake.letters"
+    val table = "letters_iceberg"
+    val database = "data_lake"
+    val fqn = s"local.$database.$table"
     spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
 
-    val expectedDf = createExpectedDataFrame()git add
+    val expectedDf = createExpectedDataFrame()
     expectedDf
       .write
       .format("iceberg")
@@ -81,13 +83,14 @@ class GenericReaderTest extends AnyFunSuite
     val inputDf = iceberg.read(spark, EngineMode.Batch)
 
     assertDataFrameEquals(inputDf, expectedDf)
+    cleanUpTestDir()
   }
 
   test("Delta batch read") {
-
     cleanUpTestDir()
-
-    val fqn = "data_lake.letters2"
+    val table = "letters_delta_stream"
+    val database = "data_lake"
+    val fqn = s"$database.$table"
     spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
 
     val expectedDf = createExpectedDataFrame()
@@ -104,14 +107,15 @@ class GenericReaderTest extends AnyFunSuite
     val sortedResultDf = resultDf.orderBy("name")
 
     assertDataFrameEquals(sortedExpectedDf, sortedResultDf)
+    cleanUpTestDir()
   }
 
   test("Iceberg stream read") {
-
     cleanUpTestDir()
-
-    val fqn = "local.data_lake.letters_stream"
-    val table = "letters_stream"
+    val table = "letters_iceberg_stream"
+    val database = "data_lake"
+    val fqn = s"local.$database.$table"
+    spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
 
     val expectedDf = createExpectedDataFrame()
     expectedDf
@@ -126,11 +130,11 @@ class GenericReaderTest extends AnyFunSuite
     val checkpointPath = testDir + "checkpoints"
 
     val query = readDf.writeStream
-      .format("parquet") // or "csv", "json", etc.
-      .outputMode("append") // Ensure the output mode is correct for your use case
-      .trigger(Trigger.Once()) // Process only one batch
+      .format("parquet")
+      .outputMode("append")
+      .trigger(Trigger.Once())
       .option("checkpointLocation", checkpointPath)
-      .option("path", testDir + table) // Specify the output path for the file
+      .option("path", testDir + table)
       .start()
 
     query.awaitTermination()
@@ -148,11 +152,11 @@ class GenericReaderTest extends AnyFunSuite
       .saveAsTable(fqn)
 
     val query2 = readDf.writeStream
-      .format("parquet") // or "csv", "json", etc.
-      .outputMode("append") // Ensure the output mode is correct for your use case
-      .trigger(Trigger.Once()) // Process only one batch
+      .format("parquet")
+      .outputMode("append")
+      .trigger(Trigger.Once())
       .option("checkpointLocation", checkpointPath)
-      .option("path", testDir + table) // Specify the output path for the file
+      .option("path", testDir + table)
       .start()
 
     query2.awaitTermination()
@@ -162,19 +166,14 @@ class GenericReaderTest extends AnyFunSuite
       .load(testDir + table)
 
     assertDataFrameEquals(expectedDf.union(expectedDf), resultDf2)
-
+    cleanUpTestDir()
   }
 
   test("Delta stream read") {
-
     cleanUpTestDir()
-
-    new Directory(new File(testDir)).deleteRecursively()
-
-    val fqn = "data_lake.letters_stream"
+    val table = "letters_delta_stream"
     val database = "data_lake"
-    val table = "letters_stream"
-
+    val fqn = s"$database.$table"
     spark.sql(s"CREATE DATABASE IF NOT EXISTS ${database}")
 
     val expectedDf = createExpectedDataFrame()
@@ -190,11 +189,11 @@ class GenericReaderTest extends AnyFunSuite
     val checkpointPath = testDir + "checkpoints"
 
     val query = inputDf.writeStream
-      .format("parquet") // or "csv", "json", etc.
-      .outputMode("append") // Ensure the output mode is correct for your use case
-      .trigger(Trigger.Once()) // Process only one batch
+      .format("parquet")
+      .outputMode("append")
+      .trigger(Trigger.Once())
       .option("checkpointLocation", checkpointPath)
-      .option("path", testDir + table) // Specify the output path for the file
+      .option("path", testDir + table)
       .start()
     query.awaitTermination()
 
@@ -206,8 +205,8 @@ class GenericReaderTest extends AnyFunSuite
     val sortedResultDf = resultDf.orderBy("name")
 
     assertDataFrameEquals(sortedExpectedDf, sortedResultDf)
+    cleanUpTestDir()
   }
 
   //TODO: test other formats and glue catalog compatibility
-
 }
