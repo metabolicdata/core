@@ -23,6 +23,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
   def run(configPath: String, params: Map[String, String]): Unit = {
 
     implicit val region = Regions.fromName(params("dp.region"))
+    val client_region = params("dp.region")
     val warehouse = params("dp.warehouse")
 
     val rawConfig = new ConfigReaderService()
@@ -41,7 +42,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       .config("spark.databricks.delta.vacuum.parallelDelete.enabled", "true")
       .config("spark.sql.catalog.spark_catalog.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog")
       .config("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
-      .config("spark.sql.catalog.spark_catalog.client.region", s"$region")
+      .config("spark.sql.catalog.spark_catalog.client.region", s"$client_region")
       .config("spark.sql.catalog.spark_catalog.warehouse", s"$warehouse")
       .config("spark.sql.defaultCatalog", "spark_catalog")
       .getOrCreate()
