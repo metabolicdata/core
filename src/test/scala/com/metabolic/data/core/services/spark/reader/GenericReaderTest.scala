@@ -39,6 +39,7 @@ class GenericReaderTest extends AnyFunSuite
   )
 
   val testDir = "./src/test/tmp/gr_test/"
+  val testDir2 = "./src/test/tmp/gr_test2/"
 
   //TODO: check iceberg catalog generalization
   //TODO: use same table for all tests
@@ -52,7 +53,11 @@ class GenericReaderTest extends AnyFunSuite
     .set("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
     .set("spark.sql.catalog.local.type", "hadoop")
     .set("spark.sql.catalog.local.warehouse", s"$testDir")
+    .set("spark.sql.catalog.local2", "org.apache.iceberg.spark.SparkCatalog")
+    .set("spark.sql.catalog.local2.type", "hadoop")
+    .set("spark.sql.catalog.local2.warehouse", s"$testDir2")
     .set("spark.sql.defaultCatalog", "spark_catalog")
+
 
   private def createExpectedDataFrame(): DataFrame = {
     spark.createDataFrame(
@@ -69,8 +74,8 @@ class GenericReaderTest extends AnyFunSuite
     cleanUpTestDir()
     val table = "letters_iceberg"
     val database = "data_lake"
-    val fqn = s"local.$database.$table"
-    spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
+    val fqn = s"local2.$database.$table"
+    spark.sql("CREATE DATABASE IF NOT EXISTS local2.data_lake")
 
     val expectedDf = createExpectedDataFrame()
     expectedDf

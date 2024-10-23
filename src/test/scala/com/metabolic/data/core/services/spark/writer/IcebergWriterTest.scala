@@ -88,6 +88,8 @@ class IcebergWriterTest extends AnyFunSuite
     val fqn = s"local.$database.$table"
     val inputDF = createExpectedDataFrame()
 
+    spark.sql("SELECT current_catalog();").show()
+
     val wm = WriteMode.Overwrite
     val cpl = ""
     val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)

@@ -10,7 +10,7 @@ class GenericReader(fqn: String) extends DataframeUnifiedReader with Logging{
 
   override def readBatch(spark: SparkSession): DataFrame = {
     //Generic for Delta Lake and Iceberg tables using fqn
-    spark.read.table(input_identifier)
+    spark.table(input_identifier)
   }
 
   override def readStream(spark: SparkSession): DataFrame = {
