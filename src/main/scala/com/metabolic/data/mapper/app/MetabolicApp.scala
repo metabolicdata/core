@@ -25,7 +25,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
     implicit val region = Regions.fromName(params("dp.region"))
     val client_region = params("dp.region")
     val warehouse_global = params("dp.warehouse_global")
-    val warehouse_development = params("dp.warehouse_development")
+    val warehouse_environment = params("dp.warehouse_environment")
 
 
     val rawConfig = new ConfigReaderService()
@@ -50,7 +50,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       .config("spark.sql.catalog.spark_catalog.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog")
       .config("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
       .config("spark.sql.catalog.spark_catalog.client.region", s"$client_region")
-      .config("spark.sql.catalog.spark_catalog.warehouse", s"$warehouse_development")
+      .config("spark.sql.catalog.spark_catalog.warehouse", s"$warehouse_environment")
       .config("spark.sql.defaultCatalog", "spark_catalog")
       .getOrCreate()
 
