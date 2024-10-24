@@ -23,7 +23,7 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
 
       case IOFormat.KAFKA => parseKafkaSource(name, config, ops)
 
-      case IOFormat.TABLE => parseMetastoreSource(name, config, ops)
+      case IOFormat.TABLE => parseTableSource(name, config, ops)
     }
   }
 
@@ -79,10 +79,10 @@ case class SourceFormatParser()(implicit val region: Regions) extends FormatPars
     StreamSource(name, servers, apiKey, apiSecret, topic, IOFormat.KAFKA, ops)
   }
 
-  private def parseMetastoreSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
+  private def parseTableSource(name: String, config: HoconConfig, ops: Seq[SourceOp]): Source = {
     val fqdn = config.getString("catalog")
 
-    MetastoreSource(fqdn, name, ops)
+    TableSource(fqdn, name, ops)
   }
 
 }

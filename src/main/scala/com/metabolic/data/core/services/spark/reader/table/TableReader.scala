@@ -4,6 +4,7 @@ import com.metabolic.data.core.services.spark.reader.DataframeUnifiedReader
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import scala.util.Random
 
+@Deprecated
 class TableReader(fqn : String, enableJDBC: Boolean, queryOutputLocation: String) extends DataframeUnifiedReader {
 
   override val input_identifier: String = fqn
@@ -19,6 +20,7 @@ class TableReader(fqn : String, enableJDBC: Boolean, queryOutputLocation: String
         .option("S3OutputLocation", s"${queryOutputLocation}/${input_identifier}-${Random.nextInt(100000)}")
         .load()
     }else {
+      // Read table from catalog
       spark.read
         .table(input_identifier)
     }

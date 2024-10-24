@@ -23,6 +23,10 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
   def run(configPath: String, params: Map[String, String]): Unit = {
 
     implicit val region = Regions.fromName(params("dp.region"))
+    val client_region = params("dp.region")
+    val warehouse_global = params("dp.warehouse_global")
+    val warehouse_environment = params("dp.warehouse_environment")
+
 
     val rawConfig = new ConfigReaderService()
       .getConfig(configPath, params)
@@ -33,11 +37,21 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
     implicit val spark = sparkBuilder
       .appName(s" Metabolic Mapper - $configPath")
       .config("spark.sql.sources.partitionOverwriteMode", "dynamic")
-      .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-      .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+      .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,io.delta.sql.DeltaSparkSessionExtension")
       .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
       .config("spark.databricks.delta.optimize.repartition.enabled", "true")
       .config("spark.databricks.delta.vacuum.parallelDelete.enabled", "true")
+      .config("spark.sql.catalog.prod", "org.apache.iceberg.spark.SparkSessionCatalog")
+      .config("spark.sql.catalog.prod.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog")
+      .config("spark.sql.catalog.prod.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
+      .config("spark.sql.catalog.prod.client.region", s"$client_region")
+      .config("spark.sql.catalog.prod.warehouse", s"$warehouse_global")
+      .config("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
+      .config("spark.sql.catalog.spark_catalog.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog")
+      .config("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
+      .config("spark.sql.catalog.spark_catalog.client.region", s"$client_region")
+      .config("spark.sql.catalog.spark_catalog.warehouse", s"$warehouse_environment")
+      .config("spark.sql.defaultCatalog", "spark_catalog")
       .getOrCreate()
 
     params.get("configJar") match {

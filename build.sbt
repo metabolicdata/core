@@ -15,6 +15,9 @@ libraryDependencies ++= Seq(
   "org.apache.kafka" % "kafka-clients" % "3.3.2",
 
   "io.delta" %% "delta-core" % "2.3.0",
+  "org.apache.iceberg" %% "iceberg-spark-runtime-3.3" % "1.6.1",
+  "org.apache.iceberg" % "iceberg-aws-bundle" % "1.6.1",
+
 
   "org.apache.logging.log4j" %% "log4j-api-scala" % "12.0",
   "com.typesafe" % "config" % "1.4.0",
@@ -71,7 +74,7 @@ libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.49" % "test"
 
 libraryDependencies += "org.mockito" % "mockito-core" % "2.21.0" % "test"
 
-Test / fork := true
+//Test / fork := true
 Test / coverageEnabled  := true
 Test / parallelExecution := false
 
