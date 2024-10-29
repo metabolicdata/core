@@ -6,7 +6,7 @@ import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import org.apache.spark.sql.catalyst.dsl.expressions.StringToAttributeConversionHelper
 import org.apache.spark.sql.functions.days
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 
 import java.util.concurrent.TimeUnit
 
@@ -22,17 +22,21 @@ class IcebergWriter(
   override def writeBatch(df: DataFrame): Unit = {
 
     writeMode match {
-      case WriteMode.Append => df
-        .write
-        .format("iceberg")
-        .mode("append")
-        .saveAsTable(output_identifier)
+      case WriteMode.Append =>
+        try {
+          df.writeTo(output_identifier).append()
+        } catch {
+          case e: AnalysisException =>
+            df.writeTo(output_identifier).using("iceberg").create()
+        }
 
-      case WriteMode.Overwrite => df
-        .write
-        .format("iceberg")
-        .mode("overwrite")
-        .saveAsTable(output_identifier)
+      case WriteMode.Overwrite =>
+        try {
+          df.writeTo(output_identifier).using("iceberg").replace()
+        } catch {
+          case e: AnalysisException =>
+            df.writeTo(output_identifier).using("iceberg").create()
+        }
 
       case WriteMode.Upsert =>
         throw new NotImplementedError("Batch Upsert is not supported in Iceberg yet")
