@@ -209,6 +209,8 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
         baseUrlConfluent + md5Hash(name)
       case _: FileSink =>
         baseUrlDataLake + md5Hash(name)
+      case _: TableSink =>
+        baseUrlDataLake + md5Hash(name)
     }
 
   }
@@ -216,11 +218,14 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
   private def getConnectorNameProcess(mapping: Config): String = mapping.sink match {
     case _: StreamSink => "confluent-kafka"
     case _: FileSink => "athena"
+    case _: TableSink => "athena"
+
   }
 
   private def getConnectionNameProcess(mapping: Config): String = mapping.sink match {
     case _: StreamSink => "production"
     case _: FileSink => "athena"
+    case _: TableSink => "athena"
   }
 
   private def getConnectionQualifiedNameProcess(mapping: Config): String = {
@@ -260,6 +265,8 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
       case _: StreamSink =>
         "KafkaTopic"
       case _: FileSink =>
+        "Table"
+      case _: TableSink =>
         "Table"
     }
   }
