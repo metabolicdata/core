@@ -8,9 +8,11 @@ scalaVersion := "2.12.17"
 val sparkVersion = "3.3.2"
 val awsVersion = "1.12.682"
 val testContainersVersion = "0.40.12"
+val confluentVersion = "7.2.3"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
+  "org.apache.spark" %% "spark-avro" % sparkVersion,
   "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
   "org.apache.kafka" % "kafka-clients" % "3.3.2",
 
@@ -39,6 +41,17 @@ pomIncludeRepository := { x => false }
 resolvers += "aws-glue-etl-artifacts" at "https://aws-glue-etl-artifacts.s3.amazonaws.com/release/"
 libraryDependencies += "com.amazonaws" % "AWSGlueETL" % "1.0.0" % Provided
 */
+
+resolvers +="confluent" at "https://packages.confluent.io/maven/"
+
+libraryDependencies ++= Seq(
+  ("io.confluent" % "kafka-avro-serializer" % confluentVersion)
+    .exclude("com.fasterxml.jackson.module","jackson-module-scala_2.13")
+    .exclude("org.scala-lang.modules", "scala-collection-compat_2.13"),
+  ("io.confluent" % "kafka-schema-registry" % confluentVersion)
+    .exclude("com.fasterxml.jackson.module", "jackson-module-scala_2.13")
+    .exclude("org.scala-lang.modules", "scala-collection-compat_2.13")
+)
 
 assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard

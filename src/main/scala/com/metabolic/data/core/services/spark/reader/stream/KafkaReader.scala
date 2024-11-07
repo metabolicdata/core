@@ -1,12 +1,13 @@
 package com.metabolic.data.core.services.spark.reader.stream
 
+import com.metabolic.data.core.services.schema.CCloudSchemaRegistryService
 import com.metabolic.data.core.services.spark.reader.DataframeUnifiedReader
-import org.apache.spark.sql.functions.{col, schema_of_json}
 import org.apache.spark.sql.streaming.DataStreamReader
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 
-class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, consumerGroup: String = "spark")
+class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, 
+                  schemaRegistryUrl: String, srApiKey: String, srApiSecret: String, schemaRegistry: Option[String], consumerGroup: String = "spark")
   extends DataframeUnifiedReader {
 
   override val input_identifier: String = topic
@@ -73,7 +74,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
     val input = setStreamAuthentication(plain)
       .load()
 
-    input.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+    deserialize(input)
 
   }
 
@@ -91,12 +92,24 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
     val input = setDFAuthentication(plain)
       .load()
 
-    input.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+    deserialize(input)
+  }
 
+  private def deserialize(input: DataFrame): DataFrame = {
+    schemaRegistry match {
+      case Some("avro") => {
+        new CCloudSchemaRegistryService(schemaRegistryUrl, srApiKey, srApiSecret).deserialize(topic, input)
+      }
+      case _ => {
+        input.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+      }
+    }
   }
 
 }
 
 object KafkaReader {
-  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String) = new KafkaReader(servers, apiKey, apiSecret, topic)
+  def apply(servers: Seq[String], apiKey: String, apiSecret: String, topic: String, schemaRegistryUrl: String,
+            srApiKey: String, srApiSecret: String, schemaRegistry: Option[String]) =
+    new KafkaReader(servers, apiKey, apiSecret, topic, schemaRegistryUrl, srApiKey, srApiSecret, schemaRegistry)
 }
