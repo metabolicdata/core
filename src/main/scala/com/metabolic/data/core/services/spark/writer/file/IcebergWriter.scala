@@ -3,8 +3,6 @@ package com.metabolic.data.core.services.spark.writer.file
 import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
-import org.apache.spark.sql.catalyst.dsl.expressions.StringToAttributeConversionHelper
-import org.apache.spark.sql.functions.days
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 
