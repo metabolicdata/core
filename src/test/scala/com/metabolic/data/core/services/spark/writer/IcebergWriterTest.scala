@@ -37,6 +37,26 @@ class IcebergWriterTest extends AnyFunSuite
     StructField("date", StringType, true),
   )
 
+  private val differentData = Seq(
+    Row("A", "a", 2022, 2, 5, "2022-02-05"),
+    Row("B", "b", 2022, 2, 4, "2022-02-04"),
+    Row("C", "c", 2022, 2, 3, "2022-02-03"),
+    Row("D", "d", 2022, 2, 2, "2022-02-02"),
+    Row("E", "e", 2022, 2, 1, "2022-02-01"),
+    Row("F", "f", 2022, 1, 5, "2022-01-05"),
+    Row("G", "g", 2021, 2, 2, "2021-02-02"),
+    Row("H", "h", 2020, 2, 5, "2020-02-05")
+  )
+
+  private val differentSchema = List(
+    StructField("name2", StringType, true),
+    StructField("data2", StringType, true),
+    StructField("yyyy2", IntegerType, true),
+    StructField("mm2", IntegerType, true),
+    StructField("dd2", IntegerType, true),
+    StructField("date2", StringType, true),
+  )
+
   val testDir = "./src/test/tmp/iw_test/"
   val catalog = "spark_catalog"
   val database = "data_lake"
@@ -57,6 +77,14 @@ class IcebergWriterTest extends AnyFunSuite
     )
   }
 
+  private def createDifferentDataFrame(): DataFrame = {
+    spark.sql(s"CREATE DATABASE IF NOT EXISTS $database")
+    spark.createDataFrame(
+      spark.sparkContext.parallelize(differentData),
+      StructType(differentSchema)
+    )
+  }
+
   private def cleanUpTestDir(): Unit = {
     new Directory(new File(testDir)).deleteRecursively()
   }
@@ -66,12 +94,11 @@ class IcebergWriterTest extends AnyFunSuite
     val table = "letters_append"
     val fqn = s"$catalog.$database.$table"
     val inputDF = createExpectedDataFrame()
-
+    val differentInputDF = createDifferentDataFrame()
 
     val wm = WriteMode.Append
     val cpl = ""
     val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
-
 
     iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(inputDF, EngineMode.Batch)
@@ -81,6 +108,27 @@ class IcebergWriterTest extends AnyFunSuite
     val expectedDf = inputDF.union(inputDF)
 
     assertDataFrameNoOrderEquals(expectedDf, outputDf)
+    cleanUpTestDir()
+  }
+
+  test("Iceberg batch append wrong data") {
+    cleanUpTestDir()
+    val table = "letters_append"
+    val fqn = s"$catalog.$database.$table"
+    val inputDF = createExpectedDataFrame()
+    val differentInputDF = createDifferentDataFrame()
+
+    val wm = WriteMode.Append
+    val cpl = ""
+    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+
+    iceberg.write(inputDF, EngineMode.Batch)
+
+    val exception = intercept[Exception] {
+      iceberg.write(differentInputDF, EngineMode.Batch)
+    }
+
+    assert(exception.getMessage.contains("Cannot write incompatible data to table"))
     cleanUpTestDir()
   }
 

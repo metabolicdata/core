@@ -14,9 +14,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
 
-
-
-
 class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: String) extends Logging {
 
   val versionRegex = """version=(\d)+/""".r
@@ -30,7 +27,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
   def setMetadata(mapping: Config): String = {
     val qualifiedName = getQualifiedNameOutput(mapping)
     val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
-    guid match{
+    guid match {
       case "" => ""
       case _ => {
         val body: String = generateMetadaBody(mapping)
@@ -73,19 +70,19 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
   private def generateDescriptionBodyJson(outputTable: String, qualifiedName: String, typeName: String): String = {
     s"""
-        |{
-        |  "entities": [
-        |    {
-        |      "typeName": "$typeName",
-        |      "attributes": {
-        |        "name": "$outputTable",
-        |        "qualifiedName": "$qualifiedName",
-        |        "description": ""
-        |      }
-        |    }
-        |  ]
-        |}
-        |""".stripMargin
+       |{
+       |  "entities": [
+       |    {
+       |      "typeName": "$typeName",
+       |      "attributes": {
+       |        "name": "$outputTable",
+       |        "qualifiedName": "$qualifiedName",
+       |        "description": ""
+       |      }
+       |    }
+       |  ]
+       |}
+       |""".stripMargin
   }
 
   def generateBodyJson(mapping: Config): String = {
@@ -100,7 +97,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     val qualifiedNameOutput = getQualifiedNameOutput(mapping)
     val qualifiedNameInputs = getQualifiedNameInputs(mapping)
 
-    val inputsJson = qualifiedNameInputs.map {  case (sourceType, qualifiedName) =>
+    val inputsJson = qualifiedNameInputs.map { case (sourceType, qualifiedName) =>
       s"""
          |          {
          |            "typeName": "${sourceType}",
@@ -141,8 +138,6 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
   }
 
-
-
   private def md5Hash(pwd: String): String = {
     val digest: Array[Byte] = MessageDigest.getInstance("MD5").digest(pwd.getBytes)
     val bigInt = new BigInteger(1, digest).toString(16).trim
@@ -155,7 +150,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     val infix_namespaces = options.infix_namespaces
     val tables = mutable.MutableList[String]()
     config.sources.foreach { source =>
-      tables += getSourceTableName(source, prefix_namespaces,infix_namespaces, options.dbName)
+      tables += getSourceTableName(source, prefix_namespaces, infix_namespaces, options.dbName)
     }
     tables.filter(p => p != "")
   }
@@ -171,38 +166,38 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     }
   }
 
-  private def getSourceTableName(source: Source,  prefix_namespaces:Seq[String],infix_namespaces:Seq[String], dbName: String): String = {
+  private def getSourceTableName(source: Source, prefix_namespaces: Seq[String], infix_namespaces: Seq[String], dbName: String): String = {
 
     source match {
 
       case streamSource: StreamSource => streamSource.topic
 
       case fileSource: FileSource => {
-
         val s3Path = versionRegex.replaceAllIn(fileSource.inputPath, "")
         val prefix = ConfigUtilsService.getTablePrefix(prefix_namespaces, s3Path)
         val infix = ConfigUtilsService.getTableInfix(infix_namespaces, s3Path)
         val tableName = ConfigUtilsService.getTableNameFileSink(s3Path)
         dbName + "/" + prefix + infix + tableName
       }
+
       case meta: TableSource => meta.fqn.replace(".", "/")
     }
   }
 
-  private def getQualifiedNameInput(source: Source,  prefix_namespaces:Seq[String],infix_namespaces:Seq[String], dbName: String): String = {
+  private def getQualifiedNameInput(source: Source, prefix_namespaces: Seq[String], infix_namespaces: Seq[String], dbName: String): String = {
 
     source match {
 
       case streamSource: StreamSource => baseUrlConfluent + streamSource.topic
 
       case fileSource: FileSource => {
-
         val s3Path = versionRegex.replaceAllIn(fileSource.inputPath, "")
         val prefix = ConfigUtilsService.getTablePrefix(prefix_namespaces, s3Path)
         val infix = ConfigUtilsService.getTableInfix(infix_namespaces, s3Path)
         val tableName = ConfigUtilsService.getTableNameFileSink(s3Path)
         baseUrlDataLake + dbName + "/" + prefix + infix + tableName
       }
+
       case meta: TableSource => baseUrlDataLake + meta.fqn.replace(".", "/")
     }
   }
@@ -213,7 +208,8 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
       case _: StreamSink =>
         baseUrlConfluent + md5Hash(name)
       case _: FileSink =>
-        baseUrlDataLake + md5Hash(name)    }
+        baseUrlDataLake + md5Hash(name)
+    }
 
   }
 
@@ -242,7 +238,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     mapping.sink match {
       case fileSink: FileSink => {
         val s3Path = versionRegex.replaceAllIn(fileSink.path, "")
-        val prefix =ConfigUtilsService.getTablePrefix(mapping.environment.namespaces, s3Path)
+        val prefix = ConfigUtilsService.getTablePrefix(mapping.environment.namespaces, s3Path)
         val infix = ConfigUtilsService.getTableInfix(mapping.environment.infix_namespaces, s3Path)
         val tableName = ConfigUtilsService.getTableName(mapping)
         val dbName = mapping.environment.dbName
@@ -251,7 +247,9 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
       case streamSink: StreamSink => {
         ConfigUtilsService.getTableName(mapping)
       }
-      case metastoreSource: TableSource => metastoreSource.fqn.replace(".", "/")
+      case tableSink: TableSink => {
+        tableSink.catalog.replace(".", "/")
+      }
     }
 
   }
@@ -292,12 +290,11 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
         }
       }
     }
-  catch
-  {
-    case e: Exception =>
-      println(s"An error occurred: ${e.getMessage}")
-      ""
-  }
+    catch {
+      case e: Exception =>
+        println(s"An error occurred: ${e.getMessage}")
+        ""
+    }
   }
 
   private def isValidJson(jsonString: String): Boolean = {

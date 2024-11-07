@@ -24,18 +24,20 @@ class IcebergWriter(
     writeMode match {
       case WriteMode.Append =>
         try {
-          df.writeTo(output_identifier).append()
-        } catch {
+          df.writeTo(output_identifier).using("iceberg").create()
+        }catch {
           case e: AnalysisException =>
-            df.writeTo(output_identifier).using("iceberg").create()
+            logger.warn("Create table failed: " + e)
+            df.writeTo(output_identifier).append()
         }
 
       case WriteMode.Overwrite =>
         try {
-          df.writeTo(output_identifier).using("iceberg").replace()
-        } catch {
+          df.writeTo(output_identifier).using("iceberg").create()
+        }catch {
           case e: AnalysisException =>
-            df.writeTo(output_identifier).using("iceberg").create()
+            logger.warn("Create table failed: " + e)
+            df.writeTo(output_identifier).using("iceberg").replace()
         }
 
       case WriteMode.Upsert =>
@@ -74,13 +76,13 @@ class IcebergWriter(
     }
   }
 
-//TODO: do we need to do any specific post write operations in Iceberg?
-//
-//  override def postHook(df: DataFrame, query: Seq[StreamingQuery]): Unit = {
-//
-//    if (query.isEmpty) {
-//      spark.sql(s"CALL local.system.rewrite_data_files('$output_identifier')")
-//    }
-//  }
+  //TODO: do we need to do any specific post write operations in Iceberg?
+  //
+  //  override def postHook(df: DataFrame, query: Seq[StreamingQuery]): Unit = {
+  //
+  //    if (query.isEmpty) {
+  //      spark.sql(s"CALL local.system.rewrite_data_files('$output_identifier')")
+  //    }
+  //  }
 
 }
