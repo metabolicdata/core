@@ -39,7 +39,14 @@ class IcebergWriter(
         }
 
       case WriteMode.Upsert =>
-        throw new NotImplementedError("Batch Upsert is not supported in Iceberg yet")
+        try {
+          df.writeTo(output_identifier).using("iceberg").create()
+        }catch {
+          case e: AnalysisException =>
+            logger.warn("Create table failed: " + e)
+            df.writeTo(output_identifier).overwritePartitions()
+        }
+
 
       case WriteMode.Delete =>
         throw new NotImplementedError("Delete is not supported in Iceberg yet")

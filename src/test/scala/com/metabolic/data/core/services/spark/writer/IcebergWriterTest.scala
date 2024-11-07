@@ -124,24 +124,64 @@ class IcebergWriterTest extends AnyFunSuite
     iceberg.write(inputDF, EngineMode.Batch)
 
     val outputDf = spark.table(fqn)
-
     val expectedDf = inputDF.union(inputDF)
 
     assertDataFrameNoOrderEquals(expectedDf, outputDf)
     cleanUpTestDir()
   }
 
-  test("Iceberg batch overwrite") {
+  test("Iceberg batch overwrite wrong data") {
     cleanUpTestDir()
-    val table = "letters_overwrite"
+    val table = "letters_overwrite_bad"
     val fqn = s"$catalog.$database.$table"
     val inputDF = createExpectedDataFrame()
-
+    val differentInputDF = createDifferentDataFrame()
 
     val wm = WriteMode.Overwrite
     val cpl = ""
     val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
 
+    iceberg.write(inputDF, EngineMode.Batch)
+    iceberg.write(differentInputDF, EngineMode.Batch)
+
+    val outputDf = spark.table(fqn)
+
+    assertDataFrameNoOrderEquals(differentInputDF, outputDf)
+    cleanUpTestDir()
+  }
+
+  test("Iceberg batch upsert wrong data") {
+    cleanUpTestDir()
+    val table = "letters_upsert_bad"
+    val fqn = s"$catalog.$database.$table"
+    val inputDF = createExpectedDataFrame()
+    val differentInputDF = createDifferentDataFrame()
+
+    val wm = WriteMode.Upsert
+    val cpl = ""
+    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+
+    iceberg.write(inputDF, EngineMode.Batch)
+
+    val exception = intercept[Exception] {
+      iceberg.write(differentInputDF, EngineMode.Batch)
+    }
+
+    assert(exception.getMessage.contains("Cannot write incompatible data to table"))
+    cleanUpTestDir()
+  }
+
+  test("Iceberg batch upsert") {
+    cleanUpTestDir()
+    val table = "letters_upsert"
+    val fqn = s"$catalog.$database.$table"
+    val inputDF = createExpectedDataFrame()
+
+    val wm = WriteMode.Upsert
+    val cpl = ""
+    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+
+    iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(inputDF, EngineMode.Batch)
 
     val outputDf = spark.table(fqn)
