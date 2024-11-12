@@ -3,6 +3,7 @@ package com.metabolic.data.mapper.app
 import com.amazonaws.regions.Regions
 import com.metabolic.data.core.services.spark.partitioner.{DatePartitioner, Repartitioner, SchemaManagerPartitioner}
 import com.metabolic.data.core.services.spark.transformations.FlattenTransform
+import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import com.metabolic.data.core.services.spark.writer.partitioned_file._
 import com.metabolic.data.core.services.spark.writer.stream.KafkaWriter
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
@@ -29,7 +30,6 @@ object MetabolicWriter extends Logging {
       }
   }
 
-
   private def prepareSink(sink: Sink)(implicit spark: SparkSession): Repartitioner = {
 
     sink.ops
@@ -39,7 +39,6 @@ object MetabolicWriter extends Logging {
           case schema: ManageSchemaSinkOp => {
 
             val schemaPartitioner = new SchemaManagerPartitioner("default", sink.name)
-
             r.addColumnsWithBuilder(schemaPartitioner.partitionColumnNames, schemaPartitioner)
 
           }
@@ -47,7 +46,6 @@ object MetabolicWriter extends Logging {
           case date: DatePartitionSinkOp => {
 
             val datePartitioner = new DatePartitioner(Option.apply(date.eventTimeColumnName), date.depth)
-
             r.addColumnsWithBuilder(datePartitioner.partitionColumnNames, datePartitioner)
 
           }
@@ -74,19 +72,8 @@ object MetabolicWriter extends Logging {
 
     sink match {
 
-      case streamSink: StreamSink => {
-        streamSink.format match {
-
-          case IOFormat.KAFKA =>
-            logger.info(s"Writing Kafka sink ${streamSink.topic}")
-
-            new KafkaWriter(streamSink.servers, streamSink.apiKey, streamSink.apiSecret,
-              streamSink.topic, streamSink.idColumnName, checkpointPath)
-              .write(_df, mode)
-
-        }
-      }
       case fileSink: FileSink => {
+        logger.info(s"Writing file sink ${fileSink.name}")
 
         val path = if (autoSchema) {
           val versionRegex = """(.*)/(version=\d+/)""".r
@@ -95,7 +82,11 @@ object MetabolicWriter extends Logging {
           fileSink.path
         }
 
-        val fileWriteMode = if(historical) { WriteMode.Overwrite} else { fileSink.writeMode }
+        val fileWriteMode = if (historical) {
+          WriteMode.Overwrite
+        } else {
+          fileSink.writeMode
+        }
 
         val repartitioner = prepareSink(sink)(_df.sparkSession)
 
@@ -118,7 +109,25 @@ object MetabolicWriter extends Logging {
             new DeltaZOrderWriter(repartitioner.partitionColumnNames, path, fileWriteMode, fileSink.eventTimeColumnName,
               fileSink.idColumnName, fileSink.dbName, checkpointPath, namespaces, fileSink.optimize, fileSink.optimizeEvery)
               .write(_output, mode)
+        }
+      }
 
+      case table: TableSink => {
+        logger.info(s"Writing Table sink ${table.catalog}")
+
+        new IcebergWriter(table.catalog, table.writeMode, checkpointPath)
+          .write(_df, mode)
+
+      }
+
+      case streamSink: StreamSink => {
+        streamSink.format match {
+          case IOFormat.KAFKA =>
+            logger.info(s"Writing Kafka sink ${streamSink.topic}")
+
+            new KafkaWriter(streamSink.servers, streamSink.apiKey, streamSink.apiSecret,
+              streamSink.topic, streamSink.idColumnName, checkpointPath)
+              .write(_df, mode)
         }
       }
     }

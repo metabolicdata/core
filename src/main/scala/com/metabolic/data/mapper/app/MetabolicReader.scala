@@ -3,7 +3,7 @@ package com.metabolic.data.mapper.app
 import com.metabolic.data.core.services.spark.filter.{DateComponentsFromReader, DateComponentsUpToReader, DateFieldFromReader, DateFieldUpToReader}
 import com.metabolic.data.core.services.spark.reader.file.{CSVReader, DeltaReader, JSONReader, ParquetReader}
 import com.metabolic.data.core.services.spark.reader.stream.KafkaReader
-import com.metabolic.data.core.services.spark.reader.table.TableReader
+import com.metabolic.data.core.services.spark.reader.table.{GenericReader, TableReader}
 import com.metabolic.data.core.services.spark.transformations._
 import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
@@ -16,7 +16,7 @@ object MetabolicReader extends Logging {
 
  def read(source: Source, historical: Boolean, mode: EngineMode, enableJDBC: Boolean, queryOutputLocation: String, jobName: String)(implicit spark: SparkSession) = {
 
-  val input = readSource(source, mode, spark, enableJDBC, queryOutputLocation, jobName)
+  val input: DataFrame = readSource(source, mode, spark, enableJDBC, queryOutputLocation, jobName)
 
   val prepared = prepareSource(source, historical, input)
 
@@ -27,6 +27,36 @@ object MetabolicReader extends Logging {
  private def readSource(source: Source, mode: EngineMode, spark: SparkSession, enableJDBC: Boolean, queryOutputLocation: String, jobName: String) = {
   source match {
 
+   case fileSource: FileSource => {
+    logger.info(s"Reading file source ${fileSource.name} from ${fileSource.inputPath}")
+
+    fileSource.format match {
+     case IOFormat.CSV =>
+      new CSVReader(fileSource.inputPath)
+        .read(spark, mode)
+
+     case IOFormat.JSON =>
+      new JSONReader(fileSource.inputPath, fileSource.useStringPrimitives)
+        .read(spark, mode)
+
+     case IOFormat.PARQUET =>
+      new ParquetReader(fileSource.inputPath)
+        .read(spark, mode)
+
+     case IOFormat.DELTA =>
+      new DeltaReader(fileSource.inputPath)
+        .read(spark, mode)
+    }
+   }
+
+   case table: TableSource => {
+    logger.info(s"Reading table source ${table.fqn}")
+
+    //TODO: reader depending of type of table
+    new GenericReader(table.fqn).read(spark, mode)
+
+   }
+
    case streamSource: StreamSource => {
     logger.info(s"Reading stream source ${streamSource.name} from ${streamSource.topic}")
 
@@ -36,32 +66,6 @@ object MetabolicReader extends Logging {
     }
    }
 
-   case fileSource: FileSource => {
-    logger.info(s"Reading file source ${fileSource.name} from ${fileSource.inputPath}")
-
-    fileSource.format match {
-     case IOFormat.CSV =>
-      new CSVReader(fileSource.inputPath)
-        .read(spark, mode)
-     case IOFormat.JSON =>
-      new JSONReader(fileSource.inputPath, fileSource.useStringPrimitives)
-        .read(spark, mode)
-     case IOFormat.PARQUET =>
-      new ParquetReader(fileSource.inputPath)
-        .read(spark, mode)
-     case IOFormat.DELTA =>
-      new DeltaReader(fileSource.inputPath)
-        .read(spark, mode)
-    }
-   }
-
-   case meta: MetastoreSource => {
-    logger.info(s"Reading source ${meta.fqn} already in metastore")
-
-    new TableReader(meta.fqn, enableJDBC, queryOutputLocation)
-      .read(spark, mode)
-
-   }
   }
  }
 

@@ -25,7 +25,16 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
       case IOFormat.JSON => parseJsonSink(name, config, ops)
       case IOFormat.PARQUET => parseParquetSink(name, config, ops)
       case IOFormat.KAFKA => parseKafkaSink(name, config, ops)
+      case IOFormat.TABLE => parseTableSink(name, config, ops, platform)
     }
+  }
+
+  private def parseTableSink(name: String, config: HoconConfig, ops: Seq[SinkOp], platform: Environment):Sink ={
+    val catalog = config.getString("catalog")
+
+    val writeMode = checkWriteMode(config)
+
+    TableSink(name, catalog, writeMode, ops = ops)
   }
 
   private def parseDeltaSink(name: String, config: HoconConfig, ops: Seq[SinkOp], platform: Environment): Sink = {
