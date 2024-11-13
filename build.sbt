@@ -7,16 +7,17 @@ scalaVersion := "2.12.17"
 /* Reusable versions */
 val sparkVersion = "3.3.2"
 val awsVersion = "1.12.682"
+val icebergVersion = "1.6.1"
 val testContainersVersion = "0.40.12"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
   "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
-  "org.apache.kafka" % "kafka-clients" % "3.3.2",
+  "org.apache.kafka" % "kafka-clients" % sparkVersion,
 
   "io.delta" %% "delta-core" % "2.3.0",
-  "org.apache.iceberg" %% "iceberg-spark-runtime-3.3" % "1.6.1",
-  "org.apache.iceberg" % "iceberg-aws-bundle" % "1.6.1",
+  "org.apache.iceberg" %% "iceberg-spark-runtime-3.3" % icebergVersion,
+  "org.apache.iceberg" % "iceberg-aws-bundle" % icebergVersion,
 
 
   "org.apache.logging.log4j" %% "log4j-api-scala" % "12.0",
