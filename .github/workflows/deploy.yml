@@ -24,13 +24,13 @@ jobs:
         run: sbt assembly
 
       - name: Upload output jar
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: jar
           path: target/scala-2.12/metabolic-core-assembly-SNAPSHOT.jar
 
       - name: Upload output entrypoint
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: em_entrypoint
           path: src/main/scala/MapperEntrypoint.scala
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download em_entrypoint
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: em_entrypoint
 
@@ -57,7 +57,7 @@ jobs:
           FILE: ./MapperEntrypoint.scala
 
       - name: Download jar
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: jar
 
@@ -81,7 +81,7 @@ jobs:
         uses: EthanSK/git-branch-name-action@v1
 
       - name: Download em_entrypoint
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: em_entrypoint
 
@@ -96,7 +96,7 @@ jobs:
           FILE: ./MapperEntrypoint.scala
 
       - name: Download jar
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: jar
 
