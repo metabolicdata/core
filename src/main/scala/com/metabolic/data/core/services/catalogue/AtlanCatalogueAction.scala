@@ -17,7 +17,9 @@ class AtlanCatalogueAction extends AfterAction with Logging {
           case (Some(_), Some(_)) =>
             val atlan = new AtlanService(token, config.environment.atlanBaseUrlDataLake.get, config.environment.atlanBaseUrlConfluent.get)
             atlan.setLineage(config)
+            atlan.setOwner(config)
             atlan.setMetadata(config)
+            atlan.setResource(config)
             logger.info(s"After Action $name: Pushed lineage generated in ${config.name} to Atlan")
           case _ =>
             logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Url is not provided")

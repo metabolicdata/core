@@ -37,6 +37,32 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     }
   }
 
+  def setOwner(mapping: Config): String = {
+    val qualifiedName = getQualifiedNameOutput(mapping)
+    val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
+    guid match {
+      case "" => ""
+      case _ => {
+        val body: String = generateOwnerBody(mapping)
+        logger.info(s"Atlan Owner Json Body ${body}")
+        HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/guid/$guid/ownership", body, token)
+      }
+    }
+  }
+
+  def setResource(mapping: Config): String = {
+    val qualifiedName = getQualifiedNameOutput(mapping)
+    val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
+    guid match {
+      case "" => ""
+      case _ => {
+        val resource = generateResourceBody(mapping)
+        logger.info(s"Atlan Resource Json Body ${resource}")
+        HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/guid/$guid/resource", resource, token)
+      }
+    }
+  }
+
   def generateMetadaBody(mapping: Config): String = {
     val last_synced = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
     val mode = mapping.environment.mode
@@ -57,6 +83,30 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
          |}
          |""".stripMargin
     body
+  }
+
+  def generateOwnerBody(mapping: Config): String = {
+
+    val config = mapping.defaults.config
+
+    if (config.hasPath("owner")) {
+      // TODO - Check that the owner from conf file matches the owner's name in Atlan
+      config.getString("owner")
+    } else {
+      ""
+    }
+  }
+
+  def generateResourceBody(mapping: Config): String = {
+
+    val config = mapping.defaults.config
+
+    if (config.hasPath("mapping.file")) {
+      // TODO - Change the hardcoded URL to a dynamic one
+      config.getConfig("mapping").getString("file").replace("s3://factorial-metabolic/data-lake-confs/production", "https://github.com/factorialco/data-lake/tree/main")
+    } else {
+      ""
+    }
   }
 
   def setDescription(mapping: Config): String = {
