@@ -44,8 +44,14 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
       case "" => ""
       case _ => {
         val body: String = generateOwnerBody(mapping)
-        logger.info(s"Atlan Owner Json Body ${body}")
-        HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/guid/$guid/ownership", body, token)
+
+        body match {
+          case null => ""
+          case _ => {
+            logger.info(s"Atlan Owner Json Body ${body}")
+            HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/assets/$guid/owners", body, token)
+          }
+        }
       }
     }
   }
@@ -56,9 +62,15 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     guid match {
       case "" => ""
       case _ => {
-        val resource = generateResourceBody(mapping)
-        logger.info(s"Atlan Resource Json Body ${resource}")
-        HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/meta/entity/guid/$guid/resource", resource, token)
+        val body = generateResourceBody(mapping)
+
+        body match {
+          case null => ""
+          case _ => {
+            logger.info(s"Atlan Resource Json Body ${body}")
+            HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/assets/$guid/resources", body, token)
+          }
+        }
       }
     }
   }
@@ -91,9 +103,19 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
     if (config.hasPath("owner")) {
       // TODO - Check that the owner from conf file matches the owner's name in Atlan
-      config.getString("owner")
+
+      val owner = config.hasPath("owner")
+
+      val body = {
+        s"""
+           |{
+           |  "owners": [$owner]
+           |}
+           |""".stripMargin
+      }
+      body
     } else {
-      ""
+      null
     }
   }
 
@@ -103,9 +125,31 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
     if (config.hasPath("mapping.file")) {
       // TODO - Change the hardcoded URL to a dynamic one
-      config.getConfig("mapping").getString("file").replace("s3://factorial-metabolic/data-lake-confs/production", "https://github.com/factorialco/data-lake/tree/main")
+      val urlSQL = config.getConfig("mapping").getString("file").replace("s3://factorial-metabolic/data-lake-confs/production", "https://github.com/factorialco/data-lake/tree/main")
+      val urlConf = urlSQL.replace("sql", "conf")
+
+      val body = {
+        s"""
+           |{
+           |  "resources": [
+           |    {
+           |      "name": "SQL File",
+           |      "type": "LINK",
+           |      "url": "$urlSQL"
+           |    },
+       |        {
+           |      "name": "Conf File",
+           |      "type": "LINK",
+           |      "url": "$urlConf"
+           |    }
+           |  ]
+           |}
+           |""".stripMargin
+      }
+
+      body
     } else {
-      ""
+      null
     }
   }
 
