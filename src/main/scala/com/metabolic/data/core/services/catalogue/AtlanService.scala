@@ -125,7 +125,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     if (config.hasPath("mapping.file")) {
       // TODO - Change the hardcoded URL to a dynamic one
       val urlSQL = config.getConfig("mapping").getString("file").replace("s3://factorial-metabolic/data-lake-confs/production", "https://github.com/factorialco/data-lake/tree/main")
-      val urlConf = urlSQL.replace("sql", "conf")
+      val urlConf = urlSQL.replace(".sql", ".conf")
 
       val body = {
         s"""
