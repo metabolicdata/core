@@ -103,7 +103,6 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
     if (config.hasPath("owner")) {
       // TODO - Check that the owner from conf file matches the owner's name in Atlan
-
       val owner = config.hasPath("owner")
 
       val body = {
@@ -137,7 +136,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
            |      "type": "LINK",
            |      "url": "$urlSQL"
            |    },
-       |        {
+           |    {
            |      "name": "Conf File",
            |      "type": "LINK",
            |      "url": "$urlConf"
