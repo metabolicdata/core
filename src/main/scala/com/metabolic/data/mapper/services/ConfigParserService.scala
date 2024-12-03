@@ -245,8 +245,8 @@ class ConfigParserService(implicit region: Regions) extends Logging {
       ""
     }
 
-    val mappings_bucket = System.getProperty("dp.mappings_bucket").replace("/mappings", "")
-    val github_repo_url = System.getProperty("dp.github_repo_url")
+    val mappings_bucket = System.getProperty("dp.mappings_bucket", "").replace("/mappings", "")
+    val github_repo_url = System.getProperty("dp.github_repo_url", "")
 
     fileUrl.replace(".sql", s".$urlType").replace(mappings_bucket, github_repo_url)
   }
