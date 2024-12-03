@@ -4,7 +4,7 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.domain.{Defaults, Environment}
 import com.metabolic.data.core.services.catalogue.AtlanService
-import com.metabolic.data.core.services.util.ConfigUtilsService
+import com.metabolic.data.core.services.util.{ConfigReaderService, ConfigUtilsService}
 import com.metabolic.data.mapper.domain._
 import com.metabolic.data.mapper.domain.io.{EngineMode, IOFormat, WriteMode}
 import com.metabolic.data.mapper.domain.ops.SQLFileMapping
@@ -52,7 +52,10 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot")),
+      Option("Test User"),
+      "",
+      ""
     )
 
     val expectedJson =
@@ -122,7 +125,10 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.StreamSink("Name test",Seq("test"), "test", "test", "topic2", Option.empty, IOFormat.KAFKA, Seq.empty),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""), Option(""), Option(""), false, false,Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot")),
+      Option("Test User"),
+      "",
+      ""
     )
 
     val expectedJson =
@@ -203,7 +209,10 @@ class AtlanServiceTest extends AnyFunSuite
       List(new SQLFileMapping("src/test/resources/simple.sql", region)),
       io.FileSink("test", "src/test/tmp/gold/stripe_f_fake_employee_t/version=4/", WriteMode.Overwrite, IOFormat.PARQUET),
       Defaults(ConfigFactory.load()),
-      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""),Option(""),  Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot"))
+      Environment("", EngineMode.Batch, "", false, "test", "", region, Option(""),Option(""),  Option(""), false, false, Seq("raw", "clean", "gold", "bronze"), Seq("raw_stripe", "raw_hubspot")),
+      Option("Test User"),
+      "",
+      ""
     )
     val calculatedJson = new AtlanService("foo", "foo", "foo")
       .generateMetadaBody(testingConfig)
@@ -219,5 +228,21 @@ class AtlanServiceTest extends AnyFunSuite
         |}
         |""".stripMargin
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
+  }
+
+  test("atlanCatalogServiceTest") {
+
+    val rawConfig = new ConfigReaderService().getConfig("src/test/resources/employees.conf")
+
+    val config = new ConfigParserService()
+      .parseConfig(rawConfig)
+
+    val owner = config.head.owner
+    val sqlFile = config.head.sqlUrl
+    val confFile = config.head.confUrl
+
+    assert(owner != Option(""))
+    assert(sqlFile != "")
+    assert(confFile != "")
   }
 }
