@@ -249,11 +249,11 @@ class ConfigParserService(implicit region: Regions) extends Logging {
     fileUrl.replace(".sql", s".$urlType").replace("s3://factorial-metabolic/data-lake-confs/production", "https://github.com/factorialco/data-lake/tree/main")
   }
 
-  private def parseOwner(config: HoconConfig): Option[String] = {
+  private def parseOwner(config: HoconConfig): String = {
     if (config.hasPathOrNull("owner")) {
-      Option.apply(config.getString("owner"))
+      config.getString("owner")
     } else {
-      Option.empty
+      ""
     }
   }
 }
