@@ -99,57 +99,42 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
   def generateOwnerBody(mapping: Config): String = {
 
-    val config = mapping.defaults.config
+    val owner = mapping.owner
 
-    if (config.hasPath("owner")) {
-      // TODO - Check that the owner from conf file matches the owner's name in Atlan
-      val owner = config.hasPath("owner")
-
-      val body = {
-        s"""
-           |{
-           |  "owners": [$owner]
-           |}
-           |""".stripMargin
-      }
-      body
-    } else {
-      null
+    val body = {
+      s"""
+         |{
+         |  "owners": [$owner]
+         |}
+         |""".stripMargin
     }
+    body
   }
 
   def generateResourceBody(mapping: Config): String = {
 
-    val config = mapping.defaults.config
+    val urlSQL = mapping.sqlUrl
+    val urlConf = mapping.confUrl
 
-    if (config.hasPath("mapping.file")) {
-      // TODO - Change the hardcoded URL to a dynamic one
-      val urlSQL = config.getConfig("mapping").getString("file").replace("s3://factorial-metabolic/data-lake-confs/production", "https://github.com/factorialco/data-lake/tree/main")
-      val urlConf = urlSQL.replace(".sql", ".conf")
-
-      val body = {
-        s"""
-           |{
-           |  "resources": [
-           |    {
-           |      "name": "SQL File",
-           |      "type": "LINK",
-           |      "url": "$urlSQL"
-           |    },
-           |    {
-           |      "name": "Conf File",
-           |      "type": "LINK",
-           |      "url": "$urlConf"
-           |    }
-           |  ]
-           |}
-           |""".stripMargin
-      }
-
-      body
-    } else {
-      null
+    val body = {
+      s"""
+         |{
+         |  "resources": [
+         |    {
+         |      "name": "SQL File",
+         |      "type": "LINK",
+         |      "url": "$urlSQL"
+         |    },
+         |    {
+         |      "name": "Conf File",
+         |      "type": "LINK",
+         |      "url": "$urlConf"
+         |    }
+         |  ]
+         |}
+         |""".stripMargin
     }
+    body
   }
 
   def setDescription(mapping: Config): String = {

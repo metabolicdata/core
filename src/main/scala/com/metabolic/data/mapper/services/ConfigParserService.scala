@@ -138,7 +138,13 @@ class ConfigParserService(implicit region: Regions) extends Logging {
 
     val sink = SinkConfigParserService().parseSink(config, platform)
 
-    Seq(new Config(name, sources, mappings, sink, defaults, platform))
+    val owner = parseOwner(config)
+
+    val sqlUrl = parseFileUrl(config, "sql")
+
+    val confUrl = parseFileUrl(config, "conf")
+
+    Seq(new Config(name, sources, mappings, sink, defaults, platform, owner, sqlUrl, confUrl))
   }
 
   private def parseName(config: HoconConfig) = {
@@ -230,4 +236,24 @@ class ConfigParserService(implicit region: Regions) extends Logging {
     Seq(mapping)
   }
 
+  private def parseFileUrl(config: HoconConfig, urlType: String): String = {
+    val fileUrl = if (config.hasPath("mappings.file")) {
+      config.getConfig("mappings").getString("file")
+    } else if (config.hasPath("mapping.file")) {
+      config.getConfig("mapping").getString("file")
+    } else {
+      ""
+    }
+
+    // TODO - Remove hardcoded URLs and replace with a configuration
+    fileUrl.replace(".sql", s".$urlType").replace("s3://factorial-metabolic/data-lake-confs/production", "https://github.com/factorialco/data-lake/tree/main")
+  }
+
+  private def parseOwner(config: HoconConfig): Option[String] = {
+    if (config.hasPathOrNull("owner")) {
+      Option.apply(config.getString("owner"))
+    } else {
+      Option.empty
+    }
+  }
 }
