@@ -26,3 +26,6 @@ To run it in streaming
 ````
 ./metabolic.sh run --streaming example.conf
 ````
+
+## Contributing
+If you want to help building Metabolic, whether that includes reporting problems, helping with documentation, or contributing code changes to fix bugs, add tests, or implement new features. See this [this document](CONTRIBUTE.md) for details.
