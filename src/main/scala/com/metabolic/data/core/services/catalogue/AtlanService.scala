@@ -99,12 +99,12 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
   def generateOwnerBody(mapping: Config): String = {
 
-    val owner = mapping.owner
+    val ownerList = mapping.owner.split(",").map(_.trim).toList
 
     val body = {
       s"""
          |{
-         |  "owners": [$owner]
+         |  "owners": $ownerList
          |}
          |""".stripMargin
     }

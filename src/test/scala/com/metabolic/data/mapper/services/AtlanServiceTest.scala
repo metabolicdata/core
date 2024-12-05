@@ -221,19 +221,56 @@ class AtlanServiceTest extends AnyFunSuite
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }
 
-  test("atlanCatalogServiceTest") {
+  test("Test generated version for owner") {
 
     val rawConfig = new ConfigReaderService().getConfig("src/test/resources/employees.conf")
 
     val config = new ConfigParserService()
       .parseConfig(rawConfig)
 
-    val owner = config.head.owner
-    val sqlFile = config.head.sqlUrl
-    val confFile = config.head.confUrl
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
+      .generateOwnerBody(config.head)
 
-    assert(owner != Option(""))
-    assert(sqlFile != "")
-    assert(confFile != "")
+    val expectedJson = {
+      s"""
+         |{
+         |  "owners": ["Fernando Azpiazu"]
+         |}
+         |""".stripMargin
+    }
+
+    assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
+  }
+
+  test("Test generated version for SQL and Conf resources") {
+
+    val rawConfig = new ConfigReaderService().getConfig("src/test/resources/employees.conf")
+
+    val config = new ConfigParserService()
+      .parseConfig(rawConfig)
+
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
+      .generateResourceBody(config.head)
+
+    val expectedJson = {
+      s"""
+         |{
+         |  "resources": [
+         |    {
+         |      "name": "SQL File",
+         |      "type": "LINK",
+         |      "url": "src/test/resources/employees.sql"
+         |    },
+         |    {
+         |      "name": "Conf File",
+         |      "type": "LINK",
+         |      "url": "src/test/resources/employees.conf"
+         |    }
+         |  ]
+         |}
+         |""".stripMargin
+    }
+
+    assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }
 }

@@ -7,7 +7,7 @@ import com.metabolic.data.mapper.domain.ops.Mapping
 import com.typesafe.config.ConfigFactory
 
 class Config(val name: String, val sources: Seq[Source], val mappings: Seq[Mapping], val sink: Sink,
-             defaults: Defaults, environment: Environment, val owner: String="", val sqlUrl: String="", val confUrl: String="") extends CoreConfig(defaults, environment) {
+             defaults: Defaults, environment: Environment, val owner: String, val sqlUrl: String, val confUrl: String) extends CoreConfig(defaults, environment) {
 
   def getCanonicalName() = {
     //regex to remove all non-alphanumeric characters
