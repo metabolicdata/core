@@ -138,7 +138,13 @@ class ConfigParserService(implicit region: Regions) extends Logging {
 
     val sink = SinkConfigParserService().parseSink(config, platform)
 
-    Seq(new Config(name, sources, mappings, sink, defaults, platform))
+    val owner = parseOwner(config)
+
+    val sqlUrl = parseFileUrl(config, "sql")
+
+    val confUrl = parseFileUrl(config, "conf")
+
+    Seq(new Config(name, sources, mappings, sink, defaults, platform, owner, sqlUrl, confUrl))
   }
 
   private def parseName(config: HoconConfig) = {
@@ -230,4 +236,26 @@ class ConfigParserService(implicit region: Regions) extends Logging {
     Seq(mapping)
   }
 
+  private def parseFileUrl(config: HoconConfig, urlType: String): String = {
+    val fileUrl = if (config.hasPath("mappings.file")) {
+      config.getConfig("mappings").getString("file")
+    } else if (config.hasPath("mapping.file")) {
+      config.getConfig("mapping").getString("file")
+    } else {
+      ""
+    }
+
+    val mappingsBucket = System.getProperty("dp.mappings_bucket", "").replace("/mappings", "")
+    val githubRepoUrl = System.getProperty("dp.github_repo_url", "")
+
+    fileUrl.replace(".sql", s".$urlType").replace(mappingsBucket, githubRepoUrl)
+  }
+
+  private def parseOwner(config: HoconConfig): String = {
+    if (config.hasPathOrNull("owner")) {
+      config.getString("owner")
+    } else {
+      ""
+    }
+  }
 }

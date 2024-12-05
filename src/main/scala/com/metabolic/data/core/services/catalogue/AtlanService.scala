@@ -37,6 +37,44 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     }
   }
 
+  def setOwner(mapping: Config): String = {
+    val qualifiedName = getQualifiedNameOutput(mapping)
+    val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
+    guid match {
+      case "" => ""
+      case _ => {
+        val body: String = generateOwnerBody(mapping)
+
+        body match {
+          case null => ""
+          case _ => {
+            logger.info(s"Atlan Owner Json Body ${body}")
+            HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/assets/$guid/owners", body, token)
+          }
+        }
+      }
+    }
+  }
+
+  def setResource(mapping: Config): String = {
+    val qualifiedName = getQualifiedNameOutput(mapping)
+    val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
+    guid match {
+      case "" => ""
+      case _ => {
+        val body = generateResourceBody(mapping)
+
+        body match {
+          case null => ""
+          case _ => {
+            logger.info(s"Atlan Resource Json Body ${body}")
+            HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/assets/$guid/resources", body, token)
+          }
+        }
+      }
+    }
+  }
+
   def generateMetadaBody(mapping: Config): String = {
     val last_synced = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
     val mode = mapping.environment.mode
@@ -56,6 +94,46 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
          |  }
          |}
          |""".stripMargin
+    body
+  }
+
+  def generateOwnerBody(mapping: Config): String = {
+
+    val ownerString = mapping.owner
+
+    val body = {
+      s"""
+         |{
+         |  "owners": ["$ownerString"]
+         |}
+         |""".stripMargin
+    }
+    body
+  }
+
+  def generateResourceBody(mapping: Config): String = {
+
+    val urlSQL = mapping.sqlUrl
+    val urlConf = mapping.confUrl
+
+    val body = {
+      s"""
+         |{
+         |  "resources": [
+         |    {
+         |      "name": "SQL File",
+         |      "type": "LINK",
+         |      "url": "$urlSQL"
+         |    },
+         |    {
+         |      "name": "Conf File",
+         |      "type": "LINK",
+         |      "url": "$urlConf"
+         |    }
+         |  ]
+         |}
+         |""".stripMargin
+    }
     body
   }
 

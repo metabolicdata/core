@@ -4,7 +4,7 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.domain.{Defaults, Environment}
 import com.metabolic.data.core.services.catalogue.AtlanService
-import com.metabolic.data.core.services.util.ConfigUtilsService
+import com.metabolic.data.core.services.util.{ConfigReaderService, ConfigUtilsService}
 import com.metabolic.data.mapper.domain._
 import com.metabolic.data.mapper.domain.io.{EngineMode, IOFormat, WriteMode}
 import com.metabolic.data.mapper.domain.ops.SQLFileMapping
@@ -218,6 +218,59 @@ class AtlanServiceTest extends AnyFunSuite
         |  }
         |}
         |""".stripMargin
+    assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
+  }
+
+  test("Test generated version for owner") {
+
+    val rawConfig = new ConfigReaderService().getConfig("src/test/resources/employees.conf")
+
+    val config = new ConfigParserService()
+      .parseConfig(rawConfig)
+
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
+      .generateOwnerBody(config.head)
+
+    val expectedJson = {
+      s"""
+         |{
+         |  "owners": ["Test User"]
+         |}
+         |""".stripMargin
+    }
+
+    assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
+  }
+
+  test("Test generated version for SQL and Conf resources") {
+
+    val rawConfig = new ConfigReaderService().getConfig("src/test/resources/employees.conf")
+
+    val config = new ConfigParserService()
+      .parseConfig(rawConfig)
+
+    val calculatedJson = new AtlanService("foo", "foo", "foo")
+      .generateResourceBody(config.head)
+
+    val expectedJson = {
+      s"""
+         |{
+         |  "resources": [
+         |    {
+         |      "name": "SQL File",
+         |      "type": "LINK",
+         |      "url": "src/test/resources/employees.sql"
+         |    },
+         |    {
+         |      "name": "Conf File",
+         |      "type": "LINK",
+         |      "url": "src/test/resources/employees.conf"
+         |    }
+         |  ]
+         |}
+         |""".stripMargin
+    }
+
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }
 }
