@@ -234,7 +234,7 @@ class AtlanServiceTest extends AnyFunSuite
     val expectedJson = {
       s"""
          |{
-         |  "owners": ["Fernando Azpiazu"]
+         |  "owners": ["Test User"]
          |}
          |""".stripMargin
     }
