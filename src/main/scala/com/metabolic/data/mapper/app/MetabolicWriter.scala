@@ -6,7 +6,7 @@ import com.metabolic.data.core.services.spark.transformations.FlattenTransform
 import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import com.metabolic.data.core.services.spark.writer.partitioned_file._
 import com.metabolic.data.core.services.spark.writer.stream.KafkaWriter
-import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SinkOp
 import com.metabolic.data.mapper.domain.ops.sink._

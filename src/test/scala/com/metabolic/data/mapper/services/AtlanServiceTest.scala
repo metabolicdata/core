@@ -6,8 +6,10 @@ import com.metabolic.data.core.domain.{Defaults, Environment}
 import com.metabolic.data.core.services.catalogue.AtlanService
 import com.metabolic.data.core.services.util.{ConfigReaderService, ConfigUtilsService}
 import com.metabolic.data.mapper.domain._
-import com.metabolic.data.mapper.domain.io.{EngineMode, IOFormat, WriteMode}
+import com.metabolic.data.mapper.domain.config.Config
+import com.metabolic.data.mapper.domain.io.{IOFormat, WriteMode}
 import com.metabolic.data.mapper.domain.ops.SQLFileMapping
+import com.metabolic.data.mapper.domain.run.EngineMode
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.SaveMode
 import org.scalatest.BeforeAndAfterAll
@@ -270,6 +272,8 @@ class AtlanServiceTest extends AnyFunSuite
          |}
          |""".stripMargin
     }
+
+    println(calculatedJson)
 
     assert(expectedJson.trim.equalsIgnoreCase(calculatedJson.trim))
   }

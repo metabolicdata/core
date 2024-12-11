@@ -1,29 +1,26 @@
 package com.metabolic.data.mapper.services
 
 import com.amazonaws.regions.Regions
-import com.metabolic.data.core.domain.{Defaults, Environment}
+import com.metabolic.data.core.domain.Environment
 import com.metabolic.data.core.services.util.SecretsManagerService
-import com.metabolic.data.mapper.domain._
-import com.metabolic.data.mapper.domain.io.EngineMode
+import com.metabolic.data.mapper.domain.config.Config
 import com.metabolic.data.mapper.domain.ops._
-import com.metabolic.data.mapper.domain.ops.mapping.{OpMapping, TupletIntervalMapping}
+import com.metabolic.data.mapper.domain.run.EngineMode
 import com.typesafe.config.{Config => HoconConfig}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.JavaConverters._
-import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
 class ConfigParserService(implicit region: Regions) extends Logging {
 
   def parseConfig(config: HoconConfig): Seq[Config] = {
 
-    val defaults = parseDefaults(config.getConfig("df"))
     val environment = parseEnvironment(config.getConfig("dp"))
 
     val parsedConfigs = if( config.hasPath("entities")) {
-      parseMultipleMappingConfig(config.getConfigList("entities").asScala, defaults, environment)
+      parseMultipleMappingConfig(config.getConfigList("entities").asScala, environment)
     } else {
-      parseSimpleMappingConfig(config, defaults, environment)
+      parseSimpleMappingConfig(config, environment)
     }
 
     parsedConfigs
@@ -118,144 +115,29 @@ class ConfigParserService(implicit region: Regions) extends Logging {
     Environment(envPrefix, engineMode, baseCheckpointLocation, crawl, dbname, iamrole, region, atlanToken, atlanBaseUrlDataLake, atlanBaseUrlConfluent, historical, autoSchema, namespaces, infix_namespaces, enableJDBC, queryOutputLocation)
   }
 
-  private def parseDefaults(config: HoconConfig) = {
-    new Defaults(config)
-  }
 
-  private def parseMultipleMappingConfig(values: Seq[_ <: HoconConfig], defaults: Defaults, platform: Environment): Seq[Config] = {
+  private def parseMultipleMappingConfig(values: Seq[_ <: HoconConfig], platform: Environment): Seq[Config] = {
 
-    values.flatMap(parseSimpleMappingConfig(_, defaults, platform))
+    values.flatMap(parseSimpleMappingConfig(_, platform))
 
   }
 
-  private def parseSimpleMappingConfig(config: HoconConfig, defaults: Defaults, platform: Environment): Seq[Config] = {
-
-    val name = parseName(config)
+  private def parseSimpleMappingConfig(config: HoconConfig, platform: Environment): Seq[Config] = {
 
     val sources = SourceConfigParserService().parseSources(config)
 
-    val mappings = parseMappings(config)
+    val mappings = MappingConfigParserService().parseMappings(config)
 
     val sink = SinkConfigParserService().parseSink(config, platform)
 
-    val owner = parseOwner(config)
+    val metadata = MetadataConfigParserService(platform).parseMetadata(config)
 
-    val sqlUrl = parseFileUrl(config, "sql")
+    val parsedConfig = Config(sources, mappings, sink, metadata)
 
-    val confUrl = parseFileUrl(config, "conf")
-
-    Seq(new Config(name, sources, mappings, sink, defaults, platform, owner, sqlUrl, confUrl))
-  }
-
-  private def parseName(config: HoconConfig) = {
-    val mappingName = config.getString("name")
-
-    mappingName
+    Seq(parsedConfig)
   }
 
 
-  def parseIntervalOp(preOp: HoconConfig): Option[OpMapping] = {
 
-    val leftTableName         = preOp.getString("leftTableName")
-    val rightTableName        = preOp.getString("rightTableName")
-    val leftIdColumnName      = preOp.getString("leftIdColumnName")
-    val rightIdColumnName     = preOp.getString("rightIdColumnName")
-    val leftWindowColumnName  = preOp.getString("leftWindowColumnName")
-    val rightWindowColumnName = preOp.getString("rightWindowColumnName")
-    val result = preOp.getString("result")
 
-    Option.apply(
-      TupletIntervalMapping(leftTableName, rightTableName,
-        leftIdColumnName, rightIdColumnName, leftWindowColumnName,
-        rightWindowColumnName, result )
-    )
-
-  }
-
-  def parse(name: String, config: HoconConfig): Option[OpMapping] = {
-    name match {
-      case "intervals"  => parseIntervalOp(config)
-      case _         => Option.empty
-    }
-  }
-
-  def parseOps(preOpsConfigs: Seq[HoconConfig]): Seq[OpMapping] = {
-    preOpsConfigs.flatMap { c =>
-      val name = c.getString("op")
-      parse(name, c)
-    }
-  }
-
-  def checkMapping(mapping: HoconConfig): Seq[Mapping] = {
-
-    val preOps = if(mapping.hasPathOrNull("preOps")) {
-
-      parseOps(mapping.getConfigList("preOps").asScala)
-
-    } else { Seq() }
-
-    val mappingOps = if(mapping.hasPathOrNull("mapping")) {
-
-      parseMappingType(mapping.getConfig("mapping"))
-
-    } else { Seq() }
-
-    val postOps = if(mapping.hasPathOrNull("postOps")) {
-
-      parseOps(mapping.getConfigList("postOps").asScala)
-
-    } else { Seq() }
-
-    val mappings = Seq[Seq[Mapping]](preOps, mappingOps, postOps)
-    mappings.flatten
-
-  }
-
-  def parseMappings(config: HoconConfig): Seq[Mapping] = {
-
-    if(config.hasPathOrNull("mappings")) {
-      checkMapping(config.getConfig("mappings"))
-    } else if (config.hasPathOrNull("mapping")) {
-      parseMappingType(config.getConfig("mapping"))
-    } else  { Seq()}
-  }
-
-  private def parseMappingType(mappingConfig: HoconConfig): Seq[SQLMapping] = {
-    val mapping = if (mappingConfig.hasPath("file")) {
-      val fileLocation = mappingConfig.getString("file")
-      new SQLFileMapping(fileLocation, region)
-
-    } else if (mappingConfig.hasPath("sql")) {
-      val sqlContents = mappingConfig.getString("sql")
-      SQLStatmentMapping(sqlContents)
-
-    } else {
-      SQLStatmentMapping("select * from {MISSING_SOURCE}")
-    }
-
-    Seq(mapping)
-  }
-
-  private def parseFileUrl(config: HoconConfig, urlType: String): String = {
-    val fileUrl = if (config.hasPath("mappings.file")) {
-      config.getConfig("mappings").getString("file")
-    } else if (config.hasPath("mapping.file")) {
-      config.getConfig("mapping").getString("file")
-    } else {
-      ""
-    }
-
-    val mappingsBucket = System.getProperty("dp.mappings_bucket", "").replace("/mappings", "")
-    val githubRepoUrl = System.getProperty("dp.github_repo_url", "")
-
-    fileUrl.replace(".sql", s".$urlType").replace(mappingsBucket, githubRepoUrl)
-  }
-
-  private def parseOwner(config: HoconConfig): String = {
-    if (config.hasPathOrNull("owner")) {
-      config.getString("owner")
-    } else {
-      ""
-    }
-  }
 }

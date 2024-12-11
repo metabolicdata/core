@@ -1,7 +1,7 @@
 package com.metabolic.data.core.services.spark.reader
 
-import com.metabolic.data.mapper.domain.io.EngineMode
-import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 trait DataframeUnifiedReader {

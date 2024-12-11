@@ -2,7 +2,8 @@ package com.metabolic.data.core.services.spark.writer
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
-import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
+import com.metabolic.data.mapper.domain.io.WriteMode
+import com.metabolic.data.mapper.domain.run.EngineMode
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}

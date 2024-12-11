@@ -1,7 +1,7 @@
 package com.metabolic.data.core.services.catalogue
 
 import com.metabolic.data.core.services.util.ConfigUtilsService
-import com.metabolic.data.mapper.domain.Config
+import com.metabolic.data.mapper.domain.config.Config
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SQLMapping
 import org.apache.hadoop.shaded.com.google.gson.JsonParseException
@@ -99,7 +99,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
   def generateOwnerBody(mapping: Config): String = {
 
-    val ownerString = mapping.owner
+    val ownerString = mapping.metadata.owner
 
     val body = {
       s"""
@@ -113,8 +113,8 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
   def generateResourceBody(mapping: Config): String = {
 
-    val urlSQL = mapping.sqlUrl
-    val urlConf = mapping.confUrl
+    val urlSQL = mapping.metadata.sqlUrl
+    val urlConf = mapping.metadata.confUrl
 
     val body = {
       s"""

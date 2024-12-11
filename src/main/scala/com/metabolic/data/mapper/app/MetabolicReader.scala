@@ -5,7 +5,7 @@ import com.metabolic.data.core.services.spark.reader.file.{CSVReader, DeltaReade
 import com.metabolic.data.core.services.spark.reader.stream.KafkaReader
 import com.metabolic.data.core.services.spark.reader.table.{GenericReader, TableReader}
 import com.metabolic.data.core.services.spark.transformations._
-import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops._
 import com.metabolic.data.mapper.domain.ops.source._

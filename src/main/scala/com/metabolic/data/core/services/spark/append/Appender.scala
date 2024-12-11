@@ -1,7 +1,7 @@
 package com.metabolic.data.core.services.spark.append
 
 import com.metabolic.data.core.services.spark.reader.DataframeUnifiedReader
-import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode.EngineMode
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object Appender {

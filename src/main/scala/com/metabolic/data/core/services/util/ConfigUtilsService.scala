@@ -1,10 +1,10 @@
 package com.metabolic.data.core.services.util
 
 
+import com.metabolic.data.mapper.domain.config.Config
 import com.typesafe.config.Config
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import com.metabolic.data.mapper.domain.Config
 import com.metabolic.data.mapper.domain.io.{FileSink, StreamSink}
 
 object ConfigUtilsService {
@@ -74,7 +74,7 @@ object ConfigUtilsService {
         }
       }.mkString("")
   }
-  def getTableName(mapping: com.metabolic.data.mapper.domain.Config): String = {
+  def getTableName(mapping: Config): String = {
 
     mapping.sink match {
       case f: FileSink => {
