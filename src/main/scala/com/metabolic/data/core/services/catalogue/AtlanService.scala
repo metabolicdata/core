@@ -77,7 +77,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
 
   def generateMetadaBody(mapping: Config): String = {
     val last_synced = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-    val mode = mapping.environment.mode
+    val mode = mapping.metadata.environment.mode
     val sql = mapping.mappings.head match {
       case sqlmapping: SQLMapping => {
         sqlmapping.sqlContents
