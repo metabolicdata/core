@@ -223,7 +223,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
   }
 
   private def getSourceTableNameList(config: Config): mutable.MutableList[String] = {
-    val options = config.environment
+    val options = config.metadata.environment
     val prefix_namespaces = options.namespaces
     val infix_namespaces = options.infix_namespaces
     val tables = mutable.MutableList[String]()
@@ -234,7 +234,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
   }
 
   private def getQualifiedNameInputs(config: Config): Seq[(String, String)] = {
-    val options = config.environment
+    val options = config.metadata.environment
     val prefix_namespaces = options.namespaces
     val infix_namespaces = options.infix_namespaces
 
@@ -321,10 +321,10 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     mapping.sink match {
       case fileSink: FileSink => {
         val s3Path = versionRegex.replaceAllIn(fileSink.path, "")
-        val prefix = ConfigUtilsService.getTablePrefix(mapping.environment.namespaces, s3Path)
-        val infix = ConfigUtilsService.getTableInfix(mapping.environment.infix_namespaces, s3Path)
+        val prefix = ConfigUtilsService.getTablePrefix(mapping.metadata.environment.namespaces, s3Path)
+        val infix = ConfigUtilsService.getTableInfix(mapping.metadata.environment.infix_namespaces, s3Path)
         val tableName = ConfigUtilsService.getTableName(mapping)
-        val dbName = mapping.environment.dbName
+        val dbName = mapping.metadata.environment.dbName
         dbName + "/" + prefix + infix + tableName
       }
       case streamSink: StreamSink => {
