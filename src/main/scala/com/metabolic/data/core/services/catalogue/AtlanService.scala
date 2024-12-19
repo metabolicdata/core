@@ -1,7 +1,7 @@
 package com.metabolic.data.core.services.catalogue
 
 import com.metabolic.data.core.services.util.ConfigUtilsService
-import com.metabolic.data.mapper.domain.Config
+import com.metabolic.data.mapper.domain.config.Config
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SQLMapping
 import org.apache.hadoop.shaded.com.google.gson.JsonParseException
@@ -37,9 +37,47 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     }
   }
 
+  def setOwner(mapping: Config): String = {
+    val qualifiedName = getQualifiedNameOutput(mapping)
+    val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
+    guid match {
+      case "" => ""
+      case _ => {
+        val body: String = generateOwnerBody(mapping)
+
+        body match {
+          case null => ""
+          case _ => {
+            logger.info(s"Atlan Owner Json Body ${body}")
+            HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/assets/$guid/owners", body, token)
+          }
+        }
+      }
+    }
+  }
+
+  def setResource(mapping: Config): String = {
+    val qualifiedName = getQualifiedNameOutput(mapping)
+    val guid = getGUI(qualifiedName).stripPrefix("\"").stripSuffix("\"")
+    guid match {
+      case "" => ""
+      case _ => {
+        val body = generateResourceBody(mapping)
+
+        body match {
+          case null => ""
+          case _ => {
+            logger.info(s"Atlan Resource Json Body ${body}")
+            HttpRequestHandler.sendHttpPostRequest(s"https://factorial.atlan.com/api/assets/$guid/resources", body, token)
+          }
+        }
+      }
+    }
+  }
+
   def generateMetadaBody(mapping: Config): String = {
     val last_synced = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-    val mode = mapping.environment.mode
+    val mode = mapping.metadata.environment.mode
     val sql = mapping.mappings.head match {
       case sqlmapping: SQLMapping => {
         sqlmapping.sqlContents
@@ -56,6 +94,46 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
          |  }
          |}
          |""".stripMargin
+    body
+  }
+
+  def generateOwnerBody(mapping: Config): String = {
+
+    val ownerString = mapping.metadata.owner
+
+    val body = {
+      s"""
+         |{
+         |  "owners": ["$ownerString"]
+         |}
+         |""".stripMargin
+    }
+    body
+  }
+
+  def generateResourceBody(mapping: Config): String = {
+
+    val urlSQL = mapping.metadata.sqlUrl
+    val urlConf = mapping.metadata.confUrl
+
+    val body = {
+      s"""
+         |{
+         |  "resources": [
+         |    {
+         |      "name": "SQL File",
+         |      "type": "LINK",
+         |      "url": "$urlSQL"
+         |    },
+         |    {
+         |      "name": "Conf File",
+         |      "type": "LINK",
+         |      "url": "$urlConf"
+         |    }
+         |  ]
+         |}
+         |""".stripMargin
+    }
     body
   }
 
@@ -145,7 +223,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
   }
 
   private def getSourceTableNameList(config: Config): mutable.MutableList[String] = {
-    val options = config.environment
+    val options = config.metadata.environment
     val prefix_namespaces = options.namespaces
     val infix_namespaces = options.infix_namespaces
     val tables = mutable.MutableList[String]()
@@ -156,7 +234,7 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
   }
 
   private def getQualifiedNameInputs(config: Config): Seq[(String, String)] = {
-    val options = config.environment
+    val options = config.metadata.environment
     val prefix_namespaces = options.namespaces
     val infix_namespaces = options.infix_namespaces
 
@@ -243,10 +321,10 @@ class AtlanService(token: String, baseUrlDataLake: String, baseUrlConfluent: Str
     mapping.sink match {
       case fileSink: FileSink => {
         val s3Path = versionRegex.replaceAllIn(fileSink.path, "")
-        val prefix = ConfigUtilsService.getTablePrefix(mapping.environment.namespaces, s3Path)
-        val infix = ConfigUtilsService.getTableInfix(mapping.environment.infix_namespaces, s3Path)
+        val prefix = ConfigUtilsService.getTablePrefix(mapping.metadata.environment.namespaces, s3Path)
+        val infix = ConfigUtilsService.getTableInfix(mapping.metadata.environment.infix_namespaces, s3Path)
         val tableName = ConfigUtilsService.getTableName(mapping)
-        val dbName = mapping.environment.dbName
+        val dbName = mapping.metadata.environment.dbName
         dbName + "/" + prefix + infix + tableName
       }
       case streamSink: StreamSink => {

@@ -1,4 +1,4 @@
-package com.metabolic.data.mapper.domain.io
+package com.metabolic.data.mapper.domain.run
 
 object EngineMode extends Enumeration {
   type EngineMode = Value

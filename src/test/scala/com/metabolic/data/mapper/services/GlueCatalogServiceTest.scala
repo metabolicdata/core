@@ -3,7 +3,7 @@ package com.metabolic.data.mapper.services
 import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.domain.Environment
 import com.metabolic.data.core.services.glue.GlueCrawlerService
-import com.metabolic.data.mapper.domain.io.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode
 import org.scalatest.funsuite.AnyFunSuite
 
 

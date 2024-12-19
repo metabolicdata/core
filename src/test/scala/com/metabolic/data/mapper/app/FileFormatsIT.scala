@@ -2,9 +2,10 @@ package com.metabolic.data.mapper.app
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.RegionedTest
+import com.metabolic.data.mapper.domain.config.Config
 import com.metabolic.data.mapper.domain.io._
 import com.metabolic.data.mapper.domain.ops.SQLStatmentMapping
-import com.metabolic.data.mapper.domain.{Config, io}
+import com.metabolic.data.mapper.domain.io
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Row, SaveMode}

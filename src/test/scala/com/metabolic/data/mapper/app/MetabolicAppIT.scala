@@ -5,9 +5,11 @@ import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.domain.{Defaults, Environment}
 import com.metabolic.data.core.services.util.ConfigReaderService
 import com.metabolic.data.mapper.domain._
-import com.metabolic.data.mapper.domain.io.{EngineMode, FileSink, FileSource, IOFormat, WriteMode}
+import com.metabolic.data.mapper.domain.config.Config
+import com.metabolic.data.mapper.domain.io.{FileSink, FileSource, IOFormat, WriteMode}
 import com.metabolic.data.mapper.domain.ops.sink.ManageSchemaSinkOp
 import com.metabolic.data.mapper.domain.ops.{SQLFileMapping, SQLStatmentMapping}
+import com.metabolic.data.mapper.domain.run.EngineMode
 import com.metabolic.data.mapper.services.ConfigParserService
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}

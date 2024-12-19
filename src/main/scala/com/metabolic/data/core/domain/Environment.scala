@@ -1,6 +1,6 @@
 package com.metabolic.data.core.domain
 import com.amazonaws.regions.Regions
-import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode.EngineMode
 
 case class Environment(name: String,
                        mode: EngineMode,
