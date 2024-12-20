@@ -47,14 +47,14 @@ case class MetadataConfigParserService(platform: Environment) {
   }
 
   private def parseFileUrl(config: HoconConfig, urlType: String): String = {
-    val fileUrl = if (config.hasPath("mappings.file")) {
-      config.getConfig("mappings").getString("file")
-    } else if (config.hasPath("mapping.file")) {
-      config.getConfig("mapping").getString("file")
-    } else {
-      ""
-    }
 
+    val fileUrl = List("mappings.file", "mapping.file")
+      .collectFirst {
+        case path if config.hasPath(path) => config.getString(path)
+      }
+      .getOrElse("")
+
+    // TODO change this from env variable to config data
     val mappingsBucket = System.getProperty("dp.mappings_bucket", "").replace("/mappings", "")
     val githubRepoUrl = System.getProperty("dp.github_repo_url", "")
 
