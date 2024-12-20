@@ -1,7 +1,7 @@
 package com.metabolic.data.core.services.athena
 
 import com.metabolic.data.core.services.util.ConfigUtilsService
-import com.metabolic.data.mapper.domain.Config
+import com.metabolic.data.mapper.domain.config.Config
 import com.metabolic.data.mapper.domain.io.{FileSink, IOFormat}
 import com.metabolic.data.mapper.services.AfterAction
 import org.apache.logging.log4j.scala.Logging
@@ -13,7 +13,7 @@ class AthenaAction extends AfterAction with Logging {
   def run(config: Config): Unit = {
     logger.info(f"Running After Action $name")
 
-    val options = config.environment
+    val options = config.metadata.environment
 
     val region = options.region
     val dbName = options.dbName
@@ -24,7 +24,7 @@ class AthenaAction extends AfterAction with Logging {
       case sink: FileSink =>
         sink.format match {
           case IOFormat.DELTA =>
-            logger.info(f"After Action $name: Creating Delta Table for ${config.name}")
+            logger.info(f"After Action $name: Creating Delta Table for ${config.metadata.name}")
             val s3Path = sink.path.replaceAll("version=\\d+", "")
             val prefix =
               ConfigUtilsService.getTablePrefix(options.namespaces, s3Path)
@@ -33,10 +33,10 @@ class AthenaAction extends AfterAction with Logging {
             athena.createDeltaTable(dbName, tableName, s3Path)
 
           case _ =>
-            logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a DeltaSink")
+            logger.warn(f"After Action: Skipping $name for ${config.metadata.name} as it is not a DeltaSink")
         }
       case _ =>
-        logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a FileSink")
+        logger.warn(f"After Action: Skipping $name for ${config.metadata.name} as it is not a FileSink")
     }
 
   }

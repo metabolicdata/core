@@ -3,7 +3,7 @@ package com.metabolic.data.mapper.app
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.services.util.ConfigReaderService
-import com.metabolic.data.mapper.domain.io.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode
 import com.metabolic.data.mapper.services.ConfigParserService
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite

@@ -2,7 +2,7 @@ package com.metabolic.data.core.services.spark.reader
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.reader.table.GenericReader
-import com.metabolic.data.mapper.domain.io.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.streaming.Trigger
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}

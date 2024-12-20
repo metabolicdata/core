@@ -3,7 +3,7 @@ package com.metabolic.data.core.services.spark.reader
 import com.dimafeng.testcontainers.KafkaContainer
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.reader.stream.KafkaReader
-import com.metabolic.data.mapper.domain.io.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode
 import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.apache.kafka.common.serialization.StringSerializer

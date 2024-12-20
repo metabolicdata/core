@@ -12,6 +12,7 @@ import org.apache.spark.sql.types._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import com.metabolic.data.mapper.domain.ops.source._
+import com.metabolic.data.mapper.domain.run.EngineMode
 import org.apache.derby.impl.sql.compile.TableName
 
 class MetabolicReaderIT extends AnyFunSuite
