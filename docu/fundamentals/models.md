@@ -10,6 +10,7 @@ A domain is exposed through one or more models and declared using a Config file.
 entities: [
     {
         name: My Domain Entity
+        owner: Owner Full Name
         sources: [
             {
                 catalog: data_lake.my_operational_table

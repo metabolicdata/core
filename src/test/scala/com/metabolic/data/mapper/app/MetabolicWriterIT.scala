@@ -4,7 +4,8 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.domain.Environment
 import com.metabolic.data.core.services.util.{ConfigReaderService, ConfigUtilsService}
-import com.metabolic.data.mapper.domain.io.{EngineMode, IOFormat, Sink}
+import com.metabolic.data.mapper.domain.io.{IOFormat, Sink}
+import com.metabolic.data.mapper.domain.run.EngineMode
 import com.metabolic.data.mapper.services.SinkConfigParserService
 import io.delta.implicits._
 import io.delta.tables.DeltaTable

@@ -1,8 +1,8 @@
 package com.metabolic.data.core.services.spark.writer
 
-import com.metabolic.data.mapper.domain.io.EngineMode
-import com.metabolic.data.mapper.domain.io.EngineMode.EngineMode
+import com.metabolic.data.mapper.domain.run.EngineMode.EngineMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
+import com.metabolic.data.mapper.domain.run.EngineMode
 import org.apache.logging.log4j.scala.Logging
 import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.DataFrame

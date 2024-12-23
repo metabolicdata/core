@@ -7,6 +7,7 @@ import com.metabolic.data.core.services.glue.GlueCrawlerAction
 import com.metabolic.data.core.services.spark.udfs.MetabolicUserDefinedFunction
 import com.metabolic.data.core.services.util.ConfigReaderService
 import com.metabolic.data.mapper.domain._
+import com.metabolic.data.mapper.domain.config.Config
 import com.metabolic.data.mapper.services.{AfterAction, ConfigParserService}
 import org.apache.logging.log4j.scala.Logging
 import org.apache.spark.sql.streaming.StreamingQuery
@@ -100,11 +101,11 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
     configs.foldLeft(Seq[StreamingQuery]()) { (streamingQueries, config) =>
       before(config)
-      logger.info(s"Transforming ${config.name}")
+      logger.info(s"Transforming ${config.metadata.name}")
       val streamingQuery = transform(config)
-      logger.info(s"Done with ${config.name}")
+      logger.info(s"Done with ${config.metadata.name}")
       after(config, withAction)
-      logger.info(s"Done registering ${config.name}")
+      logger.info(s"Done registering ${config.metadata.name}")
       streamingQueries ++ streamingQuery
     }.par.foreach {
       _.awaitTermination
@@ -117,7 +118,7 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
   def transform(mapping: Config)(implicit spark: SparkSession, region: Regions): Seq[StreamingQuery] = {
 
     mapping.sources.foreach { source =>
-      MetabolicReader.read(source, mapping.environment.historical, mapping.environment.mode, mapping.environment.enableJDBC, mapping.environment.queryOutputLocation, mapping.getCanonicalName)
+      MetabolicReader.read(source, mapping.metadata.environment.historical, mapping.metadata.environment.mode, mapping.metadata.environment.enableJDBC, mapping.metadata.environment.queryOutputLocation, mapping.metadata.getCanonicalName)
     }
 
     mapping.mappings.foreach { mapping =>
@@ -126,8 +127,8 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
 
     val output: DataFrame = spark.table("output")
 
-    MetabolicWriter.write(output, mapping.sink, mapping.environment.historical, mapping.environment.autoSchema,
-      mapping.environment.baseCheckpointLocation, mapping.environment.mode, mapping.environment.namespaces)
+    MetabolicWriter.write(output, mapping.sink, mapping.metadata.environment.historical, mapping.metadata.environment.autoSchema,
+      mapping.metadata.environment.baseCheckpointLocation, mapping.metadata.environment.mode, mapping.metadata.environment.namespaces)
 
   }
 
