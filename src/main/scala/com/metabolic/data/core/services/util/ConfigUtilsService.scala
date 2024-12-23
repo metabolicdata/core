@@ -74,7 +74,7 @@ object ConfigUtilsService {
         }
       }.mkString("")
   }
-  def getTableName(mapping: Config): String = {
+  def getTableName(mapping: com.metabolic.data.mapper.domain.config.Config): String = {
 
     mapping.sink match {
       case f: FileSink => {
