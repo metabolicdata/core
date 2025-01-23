@@ -1,51 +1,44 @@
 name: Deploy CI
-
 on:
   push:
     branches:
       - main
   release:
     types: published
-
 jobs:
   assembly:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
-
+      - uses: actions/checkout@v4
       - name: Set up JDK 8
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'adopt'
-
+          java-version: 8
+          distribution: temurin
+          cache: sbt
+      - name: Setup sbt launcher
+        uses: sbt/setup-sbt@v1
       - name: Build artifact
         run: sbt assembly
-
       - name: Upload output jar
         uses: actions/upload-artifact@v4
         with:
           name: jar
           path: target/scala-2.12/metabolic-core-assembly-SNAPSHOT.jar
-
       - name: Upload output entrypoint
         uses: actions/upload-artifact@v4
         with:
           name: em_entrypoint
           path: src/main/scala/MapperEntrypoint.scala
-
   deploy-latest:
     needs: assembly
     if: ${{ github.ref == 'refs/heads/main' }}
-
     runs-on: ubuntu-latest
     steps:
       - name: Download em_entrypoint
         uses: actions/download-artifact@v4
         with:
           name: em_entrypoint
-
       - name: Upload EM Entrypoint file to S3
         uses: a-sync/s3-uploader@master
         env:
@@ -55,12 +48,10 @@ jobs:
           S3_BUCKET: ${{ secrets.AWS_BUCKET }}
           S3_KEY: platform/core/latest/MapperEntrypoint.scala
           FILE: ./MapperEntrypoint.scala
-
       - name: Download jar
         uses: actions/download-artifact@v4
         with:
           name: jar
-
       - name: Upload jar artifact file to S3
         uses: a-sync/s3-uploader@master
         env:
@@ -70,21 +61,17 @@ jobs:
           S3_BUCKET: ${{ secrets.AWS_BUCKET }}
           S3_KEY: platform/core/latest/metabolic-core-assembly.jar
           FILE: ./metabolic-core-assembly-SNAPSHOT.jar
-
   deploy-release:
     needs: assembly
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
-
     runs-on: ubuntu-latest
     steps:
       - name: Git branch name
         uses: EthanSK/git-branch-name-action@v1
-
       - name: Download em_entrypoint
         uses: actions/download-artifact@v4
         with:
           name: em_entrypoint
-
       - name: Upload EM Entrypoint file to S3
         uses: a-sync/s3-uploader@master
         env:
@@ -94,12 +81,10 @@ jobs:
           S3_BUCKET: ${{ secrets.AWS_BUCKET }}
           S3_KEY: ${{ format('platform/core/{0}/MapperEntrypoint.scala', env.GIT_BRANCH_NAME) }}
           FILE: ./MapperEntrypoint.scala
-
       - name: Download jar
         uses: actions/download-artifact@v4
         with:
           name: jar
-
       - name: Upload jar artifact file to S3
         uses: a-sync/s3-uploader@master
         env:
