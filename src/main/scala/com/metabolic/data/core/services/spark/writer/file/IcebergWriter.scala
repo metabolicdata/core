@@ -49,15 +49,22 @@ class IcebergWriter(
             logger.warn("Create table failed: " + e)
             df.createOrReplaceTempView("merge_data_view")
             try {
+              val keyColumns = idColumnNameIceberg.split(",")
+              val onCondition = if (keyColumns.length == 1) {
+                s"target.${keyColumns.head} = source.${keyColumns.head}"
+              } else {
+                keyColumns.map(column => s"target.$column = source.$column").mkString(" AND ")
+              }
               // Merge DataFrame implementation is only available on spark > 4.0.0
-              val merge_query =
+              val merge_query = {
                 f"""
-              MERGE INTO $output_identifier AS target
-              USING merge_data_view AS source
-              ON target.$idColumnNameIceberg = source.$idColumnNameIceberg
-              WHEN MATCHED THEN UPDATE SET *
-              WHEN NOT MATCHED THEN INSERT *
-              """
+                MERGE INTO $output_identifier AS target
+                USING merge_data_view AS source
+                ON $onCondition
+                WHEN MATCHED THEN UPDATE SET *
+                WHEN NOT MATCHED THEN INSERT *
+                """
+              }
               spark.sql(merge_query)
             } catch {
               case e: Exception =>
