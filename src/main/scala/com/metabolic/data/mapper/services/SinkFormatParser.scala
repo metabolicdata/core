@@ -34,7 +34,11 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
 
     val writeMode = checkWriteMode(config)
 
-    TableSink(name, catalog, writeMode, ops = ops)
+    val idColumnName = if(config.hasPath("idColumn")) {
+      Option(config.getString("idColumn"))
+    } else None
+
+    TableSink(name, catalog, writeMode, idColumnName, ops = ops)
   }
 
   private def parseDeltaSink(name: String, config: HoconConfig, ops: Seq[SinkOp], platform: Environment): Sink = {
