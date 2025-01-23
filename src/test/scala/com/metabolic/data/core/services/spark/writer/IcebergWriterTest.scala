@@ -3,6 +3,7 @@ package com.metabolic.data.core.services.spark.writer
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
+import org.apache.iceberg.expressions.False
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
@@ -26,6 +27,32 @@ class IcebergWriterTest extends AnyFunSuite
     Row("F", "f", 2022, 1, 5, "2022-01-05"),
     Row("G", "g", 2021, 2, 2, "2021-02-02"),
     Row("H", "h", 2020, 2, 5, "2020-02-05")
+  )
+
+  private val upsertedData = Seq(
+    Row("A", "a2", 2022, 2, 5, "2022-02-05"),
+    Row("B", "b", 2022, 2, 4, "2022-02-04"),
+    Row("C", "c2", 2022, 2, 3, "2022-02-03"),
+    Row("D", "d", 2022, 2, 2, "2022-02-02"),
+    Row("E", "e", 2022, 2, 1, "2022-02-01"),
+    Row("F", "f", 2022, 1, 5, "2022-01-05"),
+    Row("G", "g", 2021, 2, 2, "2021-02-02"),
+    Row("H", "h", 2020, 2, 5, "2020-02-05"),
+    Row("I", "i", 2021, 2, 6, "2021-02-06")
+  )
+
+  private val combinedData = Seq(
+    Row("A", "a", 2022, 2, 5, "2022-02-05"),
+    Row("A", "a2", 2022, 2, 5, "2022-02-05"),
+    Row("B", "b", 2022, 2, 4, "2022-02-04"),
+    Row("C", "c", 2022, 2, 3, "2022-02-03"),
+    Row("C", "c2", 2022, 2, 3, "2022-02-03"),
+    Row("D", "d", 2022, 2, 2, "2022-02-02"),
+    Row("E", "e", 2022, 2, 1, "2022-02-01"),
+    Row("F", "f", 2022, 1, 5, "2022-01-05"),
+    Row("G", "g", 2021, 2, 2, "2021-02-02"),
+    Row("H", "h", 2020, 2, 5, "2020-02-05"),
+    Row("I", "i", 2021, 2, 6, "2021-02-06")
   )
 
   private val expectedSchema = List(
@@ -77,6 +104,22 @@ class IcebergWriterTest extends AnyFunSuite
     )
   }
 
+  private def createUpsertedDataFrame(): DataFrame = {
+    spark.sql(s"CREATE DATABASE IF NOT EXISTS $database")
+    spark.createDataFrame(
+      spark.sparkContext.parallelize(upsertedData),
+      StructType(expectedSchema)
+    )
+  }
+
+  private def createCombinedDataFrame(): DataFrame = {
+    spark.sql(s"CREATE DATABASE IF NOT EXISTS $database")
+    spark.createDataFrame(
+      spark.sparkContext.parallelize(combinedData),
+      StructType(expectedSchema)
+    )
+  }
+
   private def createDifferentDataFrame(): DataFrame = {
     spark.sql(s"CREATE DATABASE IF NOT EXISTS $database")
     spark.createDataFrame(
@@ -98,7 +141,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Append
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, Option(""), cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
 
@@ -118,7 +161,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Append
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, Option(""), cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(inputDF, EngineMode.Batch)
@@ -139,7 +182,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Overwrite
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, Option(""), cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(differentInputDF, EngineMode.Batch)
@@ -159,7 +202,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Upsert
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, Option("data2"), cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
 
@@ -167,7 +210,7 @@ class IcebergWriterTest extends AnyFunSuite
       iceberg.write(differentInputDF, EngineMode.Batch)
     }
 
-    assert(exception.getMessage.contains("Cannot write incompatible data to table"))
+    assert(exception.getMessage.contains("cannot resolve name in MERGE command given columns"))
     cleanUpTestDir()
   }
 
@@ -176,17 +219,20 @@ class IcebergWriterTest extends AnyFunSuite
     val table = "letters_upsert"
     val fqn = s"$catalog.$database.$table"
     val inputDF = createExpectedDataFrame()
+    val upsertedInputDF = createUpsertedDataFrame()
+    val combinedDF = createCombinedDataFrame()
 
     val wm = WriteMode.Upsert
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, Option("data,yyyy"), cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(inputDF, EngineMode.Batch)
+    iceberg.write(upsertedInputDF, EngineMode.Batch)
 
     val outputDf = spark.table(fqn)
 
-    assertDataFrameNoOrderEquals(inputDF, outputDf)
+    assertDataFrameNoOrderEquals(combinedDF, outputDf)
     cleanUpTestDir()
   }
 
@@ -211,7 +257,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Append
     val cpl = testDir + "checkpoints"
-    val iceberg = new IcebergWriter(result, wm, cpl)(spark)
+    val iceberg = new IcebergWriter(result, wm, Option(""), cpl)(spark)
     iceberg.write(streamDf, EngineMode.Stream)
 
     //wait for the trigger to complete

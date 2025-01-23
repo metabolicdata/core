@@ -11,11 +11,14 @@ import java.util.concurrent.TimeUnit
 class IcebergWriter(
                      val fqn: String,
                      val writeMode: WriteMode,
+                     val idColumnName: Option[String],
                      val checkpointLocation: String)
                    (implicit  val spark: SparkSession)
   extends DataframeUnifiedWriter {
 
   override val output_identifier: String = fqn
+
+  private val idColumnNameIceberg: String = idColumnName.getOrElse("")
 
   override def writeBatch(df: DataFrame): Unit = {
 
@@ -44,9 +47,31 @@ class IcebergWriter(
         }catch {
           case e: AnalysisException =>
             logger.warn("Create table failed: " + e)
-            df.writeTo(output_identifier).overwritePartitions()
+            df.createOrReplaceTempView("merge_data_view")
+            try {
+              val keyColumns = idColumnNameIceberg.split(",")
+              val onCondition = if (keyColumns.length == 1) {
+                s"target.${keyColumns.head} = source.${keyColumns.head}"
+              } else {
+                keyColumns.map(column => s"target.$column = source.$column").mkString(" AND ")
+              }
+              // Merge DataFrame implementation is only available on spark > 4.0.0
+              val merge_query = {
+                f"""
+                MERGE INTO $output_identifier AS target
+                USING merge_data_view AS source
+                ON $onCondition
+                WHEN MATCHED THEN UPDATE SET *
+                WHEN NOT MATCHED THEN INSERT *
+                """
+              }
+              spark.sql(merge_query)
+            } catch {
+              case e: Exception =>
+                logger.error(s"Error while performing upsert on $output_identifier: ${e.getMessage}")
+                throw e
+            }
         }
-
 
       case WriteMode.Delete =>
         throw new NotImplementedError("Delete is not supported in Iceberg yet")
