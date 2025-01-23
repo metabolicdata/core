@@ -49,6 +49,7 @@ class IcebergWriter(
             logger.warn("Create table failed: " + e)
             df.createOrReplaceTempView("merge_data_view")
             try {
+              // Merge DataFrame implementation is only available on spark > 4.0.0
               val merge_query =
                 f"""
               MERGE INTO $output_identifier AS target
