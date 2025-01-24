@@ -11,14 +11,14 @@ import java.util.concurrent.TimeUnit
 class IcebergWriter(
                      val fqn: String,
                      val writeMode: WriteMode,
-                     val idColumnName: Option[String],
+                     val idColumnNames: Option[Seq[String]],
                      val checkpointLocation: String)
                    (implicit  val spark: SparkSession)
   extends DataframeUnifiedWriter {
 
   override val output_identifier: String = fqn
 
-  private val idColumnNameIceberg: String = idColumnName.getOrElse("")
+  private val idColumnNamesIceberg: String = idColumnNames.getOrElse(Seq.empty).toList.mkString(",")
 
   override def writeBatch(df: DataFrame): Unit = {
 
@@ -49,7 +49,7 @@ class IcebergWriter(
             logger.warn("Create table failed: " + e)
             df.createOrReplaceTempView("merge_data_view")
             try {
-              val keyColumns = idColumnNameIceberg.replaceAll("\"", "").split(",")
+              val keyColumns = idColumnNamesIceberg.replaceAll("\"", "").split(",")
               val onCondition = if (keyColumns.length == 1) {
                 s"target.${keyColumns.head} = source.${keyColumns.head}"
               } else {

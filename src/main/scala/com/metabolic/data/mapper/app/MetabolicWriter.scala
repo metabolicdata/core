@@ -115,7 +115,7 @@ object MetabolicWriter extends Logging {
       case table: TableSink => {
         logger.info(s"Writing Table sink ${table.catalog}")
 
-        new IcebergWriter(table.catalog, table.writeMode, table.idColumnName, checkpointPath)
+        new IcebergWriter(table.catalog, table.writeMode, table.idColumnNames, checkpointPath)
           .write(_df, mode)
 
       }
