@@ -40,9 +40,8 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
   private def parseDeltaSink(name: String, config: HoconConfig, ops: Seq[SinkOp], platform: Environment): Sink = {
     val path = if(config.hasPathOrNull("outputPath")) { config.getString("outputPath")}
                else { config.getString("path") }
-
-    val idColumnName = if(config.hasPath("idColumn")) {
-      Option(config.getString("idColumn"))
+    val idColumnName = if(config.hasPath("idColumns")) {
+      Option(config.getStringList("idColumns").asScala.toList.mkString(","))
     } else None
 
     val eventTimeColumnName = if(config.hasPath("eventDtColumn")) {

@@ -49,7 +49,7 @@ class IcebergWriter(
             logger.warn("Create table failed: " + e)
             df.createOrReplaceTempView("merge_data_view")
             try {
-              val keyColumns = idColumnNameIceberg.split(",")
+              val keyColumns = idColumnNameIceberg.replaceAll("\"", "").split(",")
               val onCondition = if (keyColumns.length == 1) {
                 s"target.${keyColumns.head} = source.${keyColumns.head}"
               } else {
