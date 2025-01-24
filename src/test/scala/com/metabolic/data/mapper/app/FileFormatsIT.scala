@@ -217,7 +217,7 @@ class FileFormatsIT extends AnyFunSuite
       "",
       List(TableSource(fqnInput, "employees")),
       List(SQLStatmentMapping(multilineSQL)),
-      TableSink("test", fqnOutput, WriteMode.Overwrite, Option("name"), List.empty)
+      TableSink("test", fqnOutput, WriteMode.Overwrite, Option(List("name")), List.empty)
     )
 
     MetabolicApp()

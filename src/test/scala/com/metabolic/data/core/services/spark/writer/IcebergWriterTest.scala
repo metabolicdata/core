@@ -141,7 +141,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Append
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, Option(""), cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
 
@@ -161,7 +161,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Append
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, Option(""), cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(inputDF, EngineMode.Batch)
@@ -182,7 +182,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Overwrite
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, Option(""), cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(differentInputDF, EngineMode.Batch)
@@ -202,7 +202,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Upsert
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, Option("data2"), cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, Some(Seq("data2")), cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
 
@@ -224,7 +224,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Upsert
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, Option("data,yyyy"), cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, Some(Seq("data","name")), cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
     iceberg.write(inputDF, EngineMode.Batch)
@@ -257,7 +257,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Append
     val cpl = testDir + "checkpoints"
-    val iceberg = new IcebergWriter(result, wm, Option(""), cpl)(spark)
+    val iceberg = new IcebergWriter(result, wm, None, cpl)(spark)
     iceberg.write(streamDf, EngineMode.Stream)
 
     //wait for the trigger to complete

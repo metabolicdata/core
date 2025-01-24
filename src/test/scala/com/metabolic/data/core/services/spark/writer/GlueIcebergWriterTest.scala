@@ -73,7 +73,8 @@ class GlueIcebergWriterTest extends AnyFunSuite
     val fqn = "spark_catalog.default.letters_append"
     val wm = WriteMode.Append
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, Option(""), cpl)(spark)
+
+    val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
 
@@ -89,7 +90,8 @@ class GlueIcebergWriterTest extends AnyFunSuite
     val fqn = "spark_catalog.default.letters_overwrite"
     val wm = WriteMode.Overwrite
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, Option(""), cpl)(spark)
+
+    val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
 
@@ -118,7 +120,8 @@ class GlueIcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Append
     val cpl = testDir + "checkpoints"
-    val iceberg = new IcebergWriter(result, wm, Option(""), cpl)(spark)
+
+    val iceberg = new IcebergWriter(result, wm, None, cpl)(spark)
 
     //wait for the trigger to complete
     Thread.sleep(1000)

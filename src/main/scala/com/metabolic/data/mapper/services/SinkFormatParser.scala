@@ -34,16 +34,16 @@ case class SinkFormatParser()(implicit val region: Regions) extends FormatParser
 
     val writeMode = checkWriteMode(config)
 
-    val idColumnName = if(config.hasPath("idColumn")) {
-      Option(config.getString("idColumn"))
+    val idColumnNames = if(config.hasPath("idColumns")) {
+      Option(config.getStringList("idColumns").asScala)
     } else None
 
-    TableSink(name, catalog, writeMode, idColumnName, ops = ops)
+    TableSink(name, catalog, writeMode, idColumnNames, ops = ops)
   }
 
   private def parseDeltaSink(name: String, config: HoconConfig, ops: Seq[SinkOp], platform: Environment): Sink = {
     val path = if(config.hasPathOrNull("outputPath")) { config.getString("outputPath")}
-               else { config.getString("path") }
+    else { config.getString("path") }
 
     val idColumnName = if(config.hasPath("idColumn")) {
       Option(config.getString("idColumn"))

@@ -7,7 +7,7 @@ import com.metabolic.data.mapper.domain.ops.SinkOp
 case class TableSink(name: String,
                      catalog: String,
                      writeMode: WriteMode,
-                     idColumnName: Option[String] = None,
+                     idColumnNames: Option[Seq[String]] = None,
                      ops: Seq[SinkOp])
   extends Sink {
 
