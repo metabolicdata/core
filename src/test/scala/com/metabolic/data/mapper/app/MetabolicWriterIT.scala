@@ -3,7 +3,7 @@ package com.metabolic.data.mapper.app
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.RegionedTest
 import com.metabolic.data.core.domain.Environment
-import com.metabolic.data.core.services.util.{ConfigReaderService, ConfigUtilsService}
+import com.metabolic.data.core.services.util.ConfigReaderService
 import com.metabolic.data.mapper.domain.io.{EngineMode, IOFormat, Sink}
 import com.metabolic.data.mapper.services.SinkConfigParserService
 import io.delta.implicits._
@@ -13,16 +13,13 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.concurrent.Futures.timeout
 import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.time.{Seconds, Span}
 
 class MetabolicWriterIT extends AnyFunSuite
   with DataFrameSuiteBase
   with SharedSparkContext
   with BeforeAndAfterAll
-  with RegionedTest {
+  with RegionedTest{
 
   override def conf: SparkConf = super.conf
     .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
@@ -184,9 +181,8 @@ class MetabolicWriterIT extends AnyFunSuite
   }
 
   test("Write Delta Batch - Append") {
-
-    val outputPath = "src/test/tmp/out_fake_employee_delta"
-    val tableName = "employees"
+    val outputPath = "src/test/tmp/delta/out_fake_employees_delta_append"
+    val tableName = "employees_append_table"
 
     val sink = getFileSink(outputPath, tableName, IOFormat.DELTA.toString, "append")
 
@@ -201,24 +197,40 @@ class MetabolicWriterIT extends AnyFunSuite
         col("version")
       )
 
-    //Create table
-
     if (!DeltaTable.isDeltaTable(outputPath)) {
-      val deltaTable = DeltaTable.createIfNotExists()
-        .tableName(tableName)
-        .location(outputPath)
-        .addColumns(input.schema)
-        .execute()
+      try {
+        val deltaTable = DeltaTable.createIfNotExists()
+          .tableName(tableName)
+          .location(outputPath)
+          .addColumns(input.schema)
+          .execute()
 
-      deltaTable.toDF.write.format("delta").mode(SaveMode.Append).save(outputPath)
+        if (DeltaTable.isDeltaTable(outputPath)) {
+          println(s"Table $tableName created successfully.")
+        } else {
+          println("Table creation failed, it may be in an incomplete state.")
+        }
+      } catch {
+        case e: Exception =>
+          println(s"Error creating Delta table: ${e.getMessage}")
+          e.printStackTrace()
+      }
     }
 
+    try {
+      println("Appending data to Delta table.")
+      val deltaTable = DeltaTable.forPath(outputPath) // Use forPath to reference the existing table
+      deltaTable.toDF.write.format("delta").mode(SaveMode.Append).save(outputPath)
+    } catch {
+      case e: Exception =>
+        println(s"Error appending data to Delta table: ${e.getMessage}")
+        e.printStackTrace()
+    }
 
     MetabolicWriter.write(input, sink, true, false, "", EngineMode.Batch, Seq.empty[String] )(spark, region)
 
     val result = spark.read.delta(outputPath)
       .selectExpr("name","age","updated_at", "cast(yyyy as int) ", "cast(mm as int)", "cast(dd as int)", "version")
-
 
     assertDataFrameNoOrderEquals(expected, result)
 
@@ -226,8 +238,8 @@ class MetabolicWriterIT extends AnyFunSuite
 
   test("Write Delta Batch - Overwrite") {
 
-    val outputPath = "src/test/tmp/out_fake_employee_delta_overwrite"
-    val tableName = "employees"
+    val outputPath = "src/test/tmp/delta/out_fake_employees_delta_overwrite"
+    val tableName = "employees_overwrite_fake"
 
     val sink = getFileSink(outputPath, tableName, IOFormat.DELTA.toString, "replace")
 
@@ -243,21 +255,39 @@ class MetabolicWriterIT extends AnyFunSuite
       )
 
     if (!DeltaTable.isDeltaTable(outputPath)) {
-      val deltaTable = DeltaTable.createIfNotExists()
-        .tableName(tableName)
-        .location(outputPath)
-        .addColumns(input.schema)
-        .execute()
+      try {
+        val deltaTable = DeltaTable.createIfNotExists()
+          .tableName(tableName)
+          .location(outputPath)
+          .addColumns(input.schema)
+          .execute()
 
-      deltaTable.toDF.write.format("delta").mode(SaveMode.Append).save(outputPath)
+        if (DeltaTable.isDeltaTable(outputPath)) {
+          println(s"Table $tableName created successfully.")
+        } else {
+          println("Table creation failed, it may be in an incomplete state.")
+        }
+      } catch {
+        case e: Exception =>
+          println(s"Error creating Delta table: ${e.getMessage}")
+          e.printStackTrace()
+      }
     }
 
+    try {
+      println("Appending data to Delta table.")
+      val deltaTable = DeltaTable.forPath(outputPath) // Use forPath to reference the existing table
+      deltaTable.toDF.write.format("delta").mode(SaveMode.Append).save(outputPath)
+    } catch {
+      case e: Exception =>
+        println(s"Error appending data to Delta table: ${e.getMessage}")
+        e.printStackTrace()
+    }
 
     MetabolicWriter.write(input, sink, false, false, "", EngineMode.Batch, Seq.empty[String])(spark, region)
 
     val result = spark.read.delta(outputPath)
       .selectExpr("name", "age", "updated_at", "cast(yyyy as int) ", "cast(mm as int)", "cast(dd as int)", "version")
-
 
     assertDataFrameNoOrderEquals(expected, result)
 
