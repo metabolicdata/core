@@ -149,7 +149,7 @@ class GlueGenericReaderTest extends AnyFunSuite
     val query = readDf.writeStream
       .format("parquet")
       .outputMode("append")
-      .trigger(Trigger.Once())
+      .trigger(Trigger.AvailableNow())
       .option("checkpointLocation", checkpointPath)
       .option("path", testDir + table)
       .start()
@@ -171,7 +171,7 @@ class GlueGenericReaderTest extends AnyFunSuite
     val query2 = readDf.writeStream
       .format("parquet") // or "csv", "json", etc.
       .outputMode("append") // Ensure the output mode is correct for your use case
-      .trigger(Trigger.Once()) // Process only one batch
+      .trigger(Trigger.AvailableNow()) // Process only one batch
       .option("checkpointLocation", checkpointPath)
       .option("path", testDir + table) // Specify the output path for the file
       .start()
@@ -211,7 +211,7 @@ class GlueGenericReaderTest extends AnyFunSuite
     val query = inputDf.writeStream
       .format("parquet") // or "csv", "json", etc.
       .outputMode("append") // Ensure the output mode is correct for your use case
-      .trigger(Trigger.Once()) // Process only one batch
+      .trigger(Trigger.AvailableNow()) // Process only one batch
       .option("checkpointLocation", checkpointPath)
       .option("path", testDir + table) // Specify the output path for the file
       .start()
