@@ -149,7 +149,9 @@ class IcebergWriterTest extends AnyFunSuite
       iceberg.write(differentInputDF, EngineMode.Batch)
     }
 
-    assert(exception.getMessage.contains("Cannot write incompatible data to table"))
+    assert(exception.getMessage.contains("INCOMPATIBLE_DATA_FOR_TABLE" +
+      "" +
+      ""))
     cleanUpTestDir()
   }
 
@@ -210,7 +212,7 @@ class IcebergWriterTest extends AnyFunSuite
       iceberg.write(differentInputDF, EngineMode.Batch)
     }
 
-    assert(exception.getMessage.contains("cannot resolve name in MERGE command given columns"))
+    assert(exception.getMessage.contains("UNRESOLVED_COLUMN"))
     cleanUpTestDir()
   }
 

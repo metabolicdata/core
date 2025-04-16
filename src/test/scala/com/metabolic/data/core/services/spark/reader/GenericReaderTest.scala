@@ -93,7 +93,7 @@ class GenericReaderTest extends AnyFunSuite
 
   test("Delta batch read") {
     cleanUpTestDir()
-    val table = "letters_delta_stream"
+    val table = "letters_delta_batch"
     val database = "data_lake"
     val fqn = s"$database.$table"
     spark.sql("CREATE DATABASE IF NOT EXISTS data_lake")
@@ -137,7 +137,7 @@ class GenericReaderTest extends AnyFunSuite
     val query = readDf.writeStream
       .format("parquet")
       .outputMode("append")
-      .trigger(Trigger.Once())
+      .trigger(Trigger.AvailableNow())
       .option("checkpointLocation", checkpointPath)
       .option("path", testDir + table)
       .start()
@@ -159,7 +159,7 @@ class GenericReaderTest extends AnyFunSuite
     val query2 = readDf.writeStream
       .format("parquet")
       .outputMode("append")
-      .trigger(Trigger.Once())
+      .trigger(Trigger.AvailableNow())
       .option("checkpointLocation", checkpointPath)
       .option("path", testDir + table)
       .start()
@@ -196,7 +196,7 @@ class GenericReaderTest extends AnyFunSuite
     val query = inputDf.writeStream
       .format("parquet")
       .outputMode("append")
-      .trigger(Trigger.Once())
+      .trigger(Trigger.AvailableNow())
       .option("checkpointLocation", checkpointPath)
       .option("path", testDir + table)
       .start()
