@@ -5,23 +5,24 @@ version := "SNAPSHOT"
 scalaVersion := "2.12.17"
 
 /* Reusable versions */
-val sparkVersion = "3.3.2"
+val sparkVersion = "3.5.4"
 val awsVersion = "1.12.682"
-val icebergVersion = "1.6.1"
+val icebergVersion = "1.7.1"
 val testContainersVersion = "0.40.12"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
   "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
-  "org.apache.kafka" % "kafka-clients" % sparkVersion,
+  "org.apache.kafka" % "kafka-clients" % "3.9.0",
 
-  "io.delta" %% "delta-core" % "2.3.0",
-  "org.apache.iceberg" %% "iceberg-spark-runtime-3.3" % icebergVersion,
+  "io.delta" %% "delta-spark" % "3.3.0",
+  "org.apache.iceberg" %% "iceberg-spark-runtime-3.5" % icebergVersion,
   "org.apache.iceberg" % "iceberg-aws-bundle" % icebergVersion,
 
 
   "org.apache.logging.log4j" %% "log4j-api-scala" % "12.0",
   "com.typesafe" % "config" % "1.4.0",
+  "commons-lang" % "commons-lang" % "2.6",
 
   "net.liftweb" %% "lift-json" % "3.5.0",
   "io.lemonlabs" %% "scala-uri" % "1.4.10",
@@ -61,7 +62,7 @@ dependencyOverrides ++= {
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % Test
 
 
-libraryDependencies += "com.holdenkarau" %% "spark-testing-base" % s"${sparkVersion}_1.4.7" % Test
+libraryDependencies += "com.holdenkarau" %% "spark-testing-base" % s"3.5.3_2.0.1" % Test
 dependencyOverrides += "org.xerial.snappy" % "snappy-java" % "1.1.8.2" % Test
 
 libraryDependencies += "com.dimafeng" %% "testcontainers-scala-scalatest" % testContainersVersion % Test
@@ -75,13 +76,14 @@ libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.49" % "test"
 
 libraryDependencies += "org.mockito" % "mockito-core" % "2.21.0" % "test"
 
-//Test / fork := true
-Test / coverageEnabled  := true
-Test / parallelExecution := false
+//Test / fork := false
+//Test / coverageEnabled  := true
+//Test / parallelExecution := false
+Test / javaOptions += "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
+
 
 coverageHighlighting := true
 
-javaOptions ++= Seq("-Xms512M", "-Xmx2048M","-XX:+CMSClassUnloadingEnabled")
+javaOptions ++= Seq("-Xms512M", "-Xmx2048M","-XX:+CMSClassUnloadingEnabled", "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED")
 scalacOptions += "-target:jvm-1.8"
 scalacOptions ++= Seq("-deprecation", "-unchecked")
-
