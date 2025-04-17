@@ -194,7 +194,7 @@ class GlueGenericReaderTest extends AnyFunSuite
     val database = "data_lake"
     val table = "letters_stream"
 
-    spark.sql(s"CREATE DATABASE IF NOT EXISTS ${database}")
+    spark.sql(s"CREATE DATABASE IF NOT EXISTS $database")
 
     val expectedDf = createExpectedDataFrame()
     expectedDf

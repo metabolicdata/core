@@ -1,17 +1,19 @@
 
-<h1 style="text-align: center;">🫀Metabolic: dbt for Streaming Data Mesh</h1>
+<div align="center">
+  <h1>🫀Metabolic: dbt for Streaming Data Mesh</h1>
+</div>
 <p align="center">
   <a href="https://github.com/metabolicdata/core/actions/"><img src="https://github.com/metabolicdata/core/actions/workflows/deploy.yml/badge.svg?branch=main" alt="Github Actions Badge"></a>
-  <a href="https://github.com/metabolicdata/core/releases/"><img src="https://img.shields.io/github/v/release/metabolicdata/core?color=brightgreen&display_name=tag&logo=duckdb&logoColor=white" alt="Latest Release"></a>
+  <a href="https://github.com/metabolicdata/core/releases/"><img src="https://img.shields.io/github/v/release/metabolicdata/core?color=brightgreen&display_name=tag&logo=git&logoColor=white" alt="Latest Release"></a>
 </p>
 
 ## What's metabolic?
 
-Metabolic is a data tool for software developers to easly create and mantain an interface on their Data Domain. It allows to iterate on the technological decisions of the product without comprimising the reliability of dependant data applications, similar to contract testing in asynchronous services. 
+**Metabolic** is a data tool for software developers to easily create and maintain an interface on top of their **Data Domain**. It enables iteration on technological decisions without compromising the reliability of dependent data applications — similar in spirit to **contract testing** for asynchronous services.
 
-Safely add, modify or deprecate columns, tables or streams while mantaining service for downstream applications, such as BI dashboards, Analytics products and Machine Learning.
+With Metabolic, you can **safely add, modify, or deprecate columns, tables, and streams** while maintaining service continuity for downstream consumers like BI dashboards, analytics tools, and machine learning workflows.
 
-You can read more at https://docs.getmetabolic.io
+📚 Learn more at [docs.getmetabolic.io](https://docs.getmetabolic.io)
 
 ## Running metabolic
 
@@ -31,4 +33,6 @@ To run it in streaming
 ````
 
 ## Contributing
-If you want to help building Metabolic, whether that includes reporting problems, helping with documentation, or contributing code changes to fix bugs, add tests, or implement new features. See this [this document](CONTRIBUTE.md) for details.
+Want to help build Metabolic? Whether it's reporting issues, improving documentation, fixing bugs, writing tests, or contributing new features — we welcome your support!
+
+👉 Check out the [contribution guide](CONTRIBUTE.md) for more info.

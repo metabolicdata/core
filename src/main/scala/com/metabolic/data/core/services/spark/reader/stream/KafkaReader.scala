@@ -1,9 +1,7 @@
 package com.metabolic.data.core.services.spark.reader.stream
 
 import com.metabolic.data.core.services.spark.reader.DataframeUnifiedReader
-import org.apache.spark.sql.functions.{col, schema_of_json}
 import org.apache.spark.sql.streaming.DataStreamReader
-import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 
 class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, topic: String, consumerGroup: String = "spark")
@@ -11,7 +9,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
 
   override val input_identifier: String = topic
 
-  def setStreamAuthentication(r: DataStreamReader): DataStreamReader = {
+  private def setStreamAuthentication(r: DataStreamReader): DataStreamReader = {
 
     if(apiKey.isEmpty || apiSecret.isEmpty) {
       r
@@ -23,7 +21,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
     }
   }
 
-  def setDFAuthentication(r: DataFrameReader): DataFrameReader = {
+  private def setDFAuthentication(r: DataFrameReader): DataFrameReader = {
 
     if (apiKey.isEmpty || apiSecret.isEmpty) {
       r
@@ -33,27 +31,6 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
         .option("kafka.sasl.mechanism", "PLAIN")
         .option("kafka.sasl.jaas.config", s"org.apache.kafka.common.security.plain.PlainLoginModule required username='$apiKey' password='$apiSecret';")
     }
-  }
-
-  def getSchema(spark: SparkSession): StructType = {
-
-    val plain = spark
-      .read
-      .format("kafka")
-      .option("kafka.bootstrap.servers", servers.mkString(","))
-      .option("subscribe", topic)
-      .option("startingOffsets", "latest")
-
-    val input = setDFAuthentication(plain)
-      .load()
-
-    val jsonString = input
-      .selectExpr("CAST(value AS STRING) as value")
-      .first()
-      .toString()
-
-    DataType.fromJson(jsonString).asInstanceOf[StructType]
-
   }
 
   def readStream(spark: SparkSession): DataFrame = {
@@ -86,7 +63,6 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .option("subscribe", topic)
       .option("groupIdPrefix",s"metabolic-batch-${consumerGroup}")
       .option("startingOffsets", "earliest")
-      .option("endingOffsets", "latest")
 
     val input = setDFAuthentication(plain)
       .load()
