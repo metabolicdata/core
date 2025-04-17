@@ -179,7 +179,7 @@ class GenericReaderTest extends AnyFunSuite
     val table = "letters_delta_stream"
     val database = "data_lake"
     val fqn = s"$database.$table"
-    spark.sql(s"CREATE DATABASE IF NOT EXISTS ${database}")
+    spark.sql(s"CREATE DATABASE IF NOT EXISTS $database")
 
     val expectedDf = createExpectedDataFrame()
     expectedDf
