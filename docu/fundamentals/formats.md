@@ -6,7 +6,8 @@ description: Formats are the IO capabilities.
 
 Formats make reading and writing trivial. Currently, the following physical formats are supported:
 
-- Delta Tables (default)
+- Iceberg (default Table format)
+- Delta Lake
 - Parquet Files
 - Json Files
 - CSV Files
@@ -17,16 +18,49 @@ Additionally Metabolic provides a virtual format named catalog.
 ## Batch vs Streaming formats
 
 Metabolic doesn't restrict the use of a specific format whereas you want to run your entities in Batch or Streaming,
-as other processing engines like Flink or KSQL do. Given said that, Delta and Kafka are preferred options if you
+as other processing engines like Flink or KSQL do. Given said that, Iceberg, Delta and Kafka are preferred options if you
 plan on switching a lot between them (for example following a Kappa Architecture) or you plan on having
 
+## Iceberg
 
-## Delta
+Iceberg is the default Metabolic Table format, as it provides atomic operations over a data lake, 
+allowing file-based storages to behave like databases.
 
-Delta is the default and preferred format to use Metabolic with, as it provides atomic operations over a data lake,
-allowing file based storages behave like databases.
+Iceberg operates by using a **catalog** for both reading and writing data, rather than relying directly on the underlying 
+filesystem. This approach provides a more flexible and robust way to manage large-scale datasets, as the catalog stores 
+metadata about the tables, including their schema, partitions, and versions.
 
-[More on Delta](https://docs.delta.io/2.1.0/index.html)
+[More on Iceberg](https://iceberg.apache.org/)
+
+### How to read an Iceberg Source
+
+```yaml
+sources: [
+  {
+      catalog: ${dp.database}."my_table"
+      name: data_lake_my_iceberg_table
+      format: TABLE
+      ops: [ ... ]
+  }
+  ...
+]
+```
+
+### How to write an Iceberg Table
+
+```yaml
+sink: {
+        catalog: ${dp.database_silver}."my_table_silver"
+}
+```
+
+Iceberg supports **append**, **overwrite** and **upsert** write modes.
+
+## Delta Lake
+
+Delta Lake is another powerful table format supported by Metabolic, with automatic optimizations build in.
+
+[More on Delta](https://docs.delta.io/latest/index.html)
 
 ### How to read a Delta Source
 
@@ -102,7 +136,7 @@ sink: {
 ## Json
 
 Json is another storage format popular in the analytics community, as it safely serializes records while maintaining a
-very human-readable interface. Metabolic specifically uses the JSON Lines subformat.
+very human-readable interface. Metabolic specifically uses the JSON Lines format.
 
 [More on JSON](https://jsonlines.org/)
 
@@ -193,7 +227,7 @@ but it is not recommended as middle format when doing modular transformations.
 
 ## Kafka
 
-Kafka topics are stream storages for events
+Kafka topics are stream storages for events.
 
 [More on Kafka](https://kafka.apache.org/documentation/#intro_concepts_and_terms)
 
@@ -241,4 +275,4 @@ sink: {
 }
 ```
 
-name is streaming jobs required in order to create a checkpoint
+*name* is required in streaming jobs in order to create a checkpoint.
