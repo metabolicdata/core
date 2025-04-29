@@ -33,10 +33,10 @@ class AthenaAction extends AfterAction with Logging {
             athena.createDeltaTable(dbName, tableName, s3Path)
 
           case _ =>
-            logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a DeltaSink")
+            logger.info(f"After Action: Skipping $name for ${config.name} as it is not a DeltaSink")
         }
       case _ =>
-        logger.warn(f"After Action: Skipping $name for ${config.name} as it is not a FileSink")
+        logger.info(f"After Action: Skipping $name for ${config.name} as it is not a FileSink")
     }
 
   }

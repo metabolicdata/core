@@ -34,16 +34,16 @@ class GlueCrawlerAction extends AfterAction with Logging {
           case com.metabolic.data.mapper.domain.io.IOFormat.JSON =>
             runCrawler(config, options, crawlerName, dbName, iamRole, glue, sink)
           case com.metabolic.data.mapper.domain.io.IOFormat.DELTA =>
-            logger.warn(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaSink")
+            logger.info(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaSink")
           case com.metabolic.data.mapper.domain.io.IOFormat.DELTA_PARTITION =>
-            logger.warn(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaPartitionSink")
+            logger.info(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaPartitionSink")
           case com.metabolic.data.mapper.domain.io.IOFormat.KAFKA =>
-            logger.warn(f"After Action $name: Skipping Glue Crawler for ${config.name} for KafkaSink")
+            logger.info(f"After Action $name: Skipping Glue Crawler for ${config.name} for KafkaSink")
           case com.metabolic.data.mapper.domain.io.IOFormat.TABLE =>
-            logger.warn(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaSink")
+            logger.info(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaSink")
         }
       case _ =>
-        logger.warn(f"After Action: Skipping $crawlerName for ${config.name} as it is not a FileSink")
+        logger.info(f"After Action: Skipping $crawlerName for ${config.name} as it is not a FileSink")
     }
 
   }
