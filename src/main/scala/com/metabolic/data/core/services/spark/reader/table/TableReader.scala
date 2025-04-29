@@ -1,4 +1,4 @@
-  package com.metabolic.data.core.services.spark.reader.table
+package com.metabolic.data.core.services.spark.reader.table
 
 import com.metabolic.data.core.services.spark.reader.DataframeUnifiedReader
 import org.apache.spark.sql.{DataFrame, SparkSession}
