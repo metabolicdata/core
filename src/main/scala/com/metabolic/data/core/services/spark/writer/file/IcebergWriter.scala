@@ -28,7 +28,7 @@ class IcebergWriter(
           df.writeTo(output_identifier).using("iceberg").create()
         }catch {
           case e: AnalysisException =>
-            logger.warn("Create table failed: " + e)
+            logger.info("Create table skipped: " + e)
             df.writeTo(output_identifier).append()
         }
 
@@ -37,7 +37,7 @@ class IcebergWriter(
           df.writeTo(output_identifier).using("iceberg").create()
         }catch {
           case e: AnalysisException =>
-            logger.warn("Create table failed: " + e)
+            logger.info("Create table skipped: " + e)
             df.writeTo(output_identifier).using("iceberg").replace()
         }
 
@@ -46,7 +46,7 @@ class IcebergWriter(
           df.writeTo(output_identifier).using("iceberg").create()
         }catch {
           case e: AnalysisException =>
-            logger.warn("Create table failed: " + e)
+            logger.info("Create table skipped: " + e)
             df.createOrReplaceTempView("merge_data_view")
             try {
               val keyColumns = idColumnNamesIceberg.replaceAll("\"", "").split(",")

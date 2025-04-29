@@ -20,10 +20,10 @@ class AtlanCatalogueAction extends AfterAction with Logging {
             atlan.setMetadata(config)
             logger.info(s"After Action $name: Pushed lineage generated in ${config.name} to Atlan")
           case _ =>
-            logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Url is not provided")
+            logger.info(s"After Action: Skipping $name for ${config.name} as Atlan Url is not provided")
         }
       case None =>
-        logger.warn(s"After Action: Skipping $name for ${config.name} as Atlan Token is not provided")
+        logger.info(s"After Action: Skipping $name for ${config.name} as Atlan Token is not provided")
     }
   }
 }
