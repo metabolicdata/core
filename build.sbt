@@ -13,7 +13,8 @@ val testContainersVersion = "0.40.12"
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
   "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
-  "org.apache.spark" %% "spark-token-provider-kafka-0-10" % sparkVersion,
+  "org.apache.spark" %% "spark-streaming-kafka-0-10" % sparkVersion,
+  "org.apache.kafka" % "kafka-clients" % "3.5.2",
 
   "io.delta" %% "delta-spark" % "3.3.0",
   "org.apache.iceberg" %% "iceberg-spark-runtime-3.5" % icebergVersion,
