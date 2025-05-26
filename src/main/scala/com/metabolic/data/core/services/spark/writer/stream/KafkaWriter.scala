@@ -14,6 +14,19 @@ class KafkaWriter(servers: Seq[String], apiKey: String, apiSecret: String, topic
 
   override val writeMode: WriteMode = WriteMode.Append
 
+  private def setWriteAuthentication(writer: org.apache.spark.sql.DataFrameWriter[_]): org.apache.spark.sql.DataFrameWriter[_] = {
+    if (apiKey.isEmpty || apiSecret.isEmpty) {
+      writer
+    } else {
+      writer
+        .option("kafka.security.protocol", "SASL_SSL")
+        .option("kafka.sasl.mechanism", "PLAIN")
+        .option("kafka.sasl.jaas.config",
+          s"org.apache.kafka.common.security.plain.PlainLoginModule required username='$apiKey' password='$apiSecret';"
+        )
+    }
+  }
+
   override def writeStream(df: DataFrame): StreamingQuery = {
 
     val kafkaDf = idColumnName match {
@@ -44,19 +57,17 @@ class KafkaWriter(servers: Seq[String], apiKey: String, apiSecret: String, topic
       case None => df.selectExpr("to_json(struct(*)) as value")
     }
 
-    kafkaDf
+    val plain = kafkaDf
       .write
       .format("kafka")
       .option("kafka.bootstrap.servers", servers.mkString(","))
       .option("topic", output_identifier)
-      .option("kafka.security.protocol", "SASL_SSL")
-      .option("kafka.sasl.mechanism", "PLAIN")
-      .option("kafka.sasl.jaas.config", s"org.apache.kafka.common.security.plain.PlainLoginModule required username='$apiKey' password='$apiSecret';")
       .option("kafka.session.timeout.ms", 45000)
-      .option("kafka.client.dns.lookup","use_all_dns_ips")
-      .save()
+      .option("kafka.client.dns.lookup", "use_all_dns_ips")
 
+    val withAuth = setWriteAuthentication(plain)
 
+    withAuth.save()
   }
 
 }
