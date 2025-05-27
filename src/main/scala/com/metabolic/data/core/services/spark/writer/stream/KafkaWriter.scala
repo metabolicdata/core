@@ -48,7 +48,7 @@ class KafkaWriter(
       .format("kafka")
       .options(commonKafkaOptions ++ authOptions)
       .option("checkpointLocation", checkpointLocation)
-      .option("failOnDataLoss", false)
+      .option("failOnDataLoss", value = false)
       .start()
   }
 
