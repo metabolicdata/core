@@ -9,12 +9,14 @@ val sparkVersion = "3.5.4"
 val awsVersion = "1.12.682"
 val icebergVersion = "1.7.1"
 val testContainersVersion = "0.40.12"
+val kafkaVersion = "3.5.1"
+
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
   "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
-  "org.apache.spark" %% "spark-streaming-kafka-0-10" % sparkVersion,
-  "org.apache.kafka" % "kafka-clients" % "3.5.2",
+  "org.apache.spark" %% "spark-token-provider-kafka-0-10" % sparkVersion,
+  "org.apache.kafka" % "kafka-clients" % kafkaVersion,
 
   "io.delta" %% "delta-spark" % "3.3.0",
   "org.apache.iceberg" %% "iceberg-spark-runtime-3.5" % icebergVersion,
@@ -54,7 +56,7 @@ dependencyOverrides ++= {
   Seq(
     "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.13.0",
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.5",
-    "org.antlr" % "antlr4-runtime" % "4.8",
+    "org.antlr" % "antlr4-runtime" % "4.9.3",
     "org.scala-lang.modules" %% "scala-xml" % "1.3.0"
   )
 }
