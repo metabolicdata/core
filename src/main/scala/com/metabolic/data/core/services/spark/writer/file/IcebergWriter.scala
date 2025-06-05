@@ -12,7 +12,8 @@ class IcebergWriter(
                      val fqn: String,
                      val writeMode: WriteMode,
                      val idColumnNames: Option[Seq[String]],
-                     val checkpointLocation: String)
+                     val checkpointLocation: String,
+                     val partitionColumnNames: Option[Seq[String]] = None)
                    (implicit  val spark: SparkSession)
   extends DataframeUnifiedWriter {
 
@@ -83,6 +84,25 @@ class IcebergWriter(
   }
 
   override def writeStream(df: DataFrame): StreamingQuery = {
+
+    val partitionClause = partitionColumnNames match {
+      case Some(cols) if cols.nonEmpty =>
+        val partitionCols = cols.mkString(", ")
+        s"PARTITIONED BY ($partitionCols)"
+      case _ =>
+        "" // no partitioning
+    }
+
+    val createTableStmt = s"""
+    CREATE TABLE IF NOT EXISTS $output_identifier (
+        ${df.schema.fields.map(f => s"${f.name} ${f.dataType.sql}").mkString(", ")}
+      )
+      USING iceberg
+      $partitionClause
+    """
+
+    // Run create table statement (will do nothing if table already exists)
+    spark.sql(createTableStmt)
 
     writeMode match {
       case WriteMode.Append =>

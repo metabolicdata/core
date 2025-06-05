@@ -114,8 +114,14 @@ object MetabolicWriter extends Logging {
 
       case table: TableSink => {
         logger.info(s"Writing Table sink ${table.catalog}")
+        val repartitioner = prepareSink(sink)(_df.sparkSession)
 
-        new IcebergWriter(table.catalog, table.writeMode, table.idColumnNames, checkpointPath)
+        val partitionColsOpt = repartitioner.partitionColumnNames match {
+          case Nil => None
+          case cols => Some(cols.distinct)
+        }
+
+        new IcebergWriter(table.catalog, table.writeMode, table.idColumnNames, checkpointPath, partitionColsOpt)
           .write(_df, mode)
 
       }
