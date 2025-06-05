@@ -12,7 +12,8 @@ class IcebergWriter(
                      val fqn: String,
                      val writeMode: WriteMode,
                      val idColumnNames: Option[Seq[String]],
-                     val checkpointLocation: String)
+                     val checkpointLocation: String,
+                     val partitionColumnNames: Option[Seq[String]] = None)
                    (implicit  val spark: SparkSession)
   extends DataframeUnifiedWriter {
 
@@ -92,6 +93,7 @@ class IcebergWriter(
           .outputMode("append")
           .trigger(Trigger.ProcessingTime(1, TimeUnit.MINUTES))
           .option("checkpointLocation", checkpointLocation)
+          .option("partitioning", partitionColumnNames.getOrElse(Seq.empty).mkString(","))
           .toTable(output_identifier)
 
       case WriteMode.Complete =>
@@ -101,6 +103,7 @@ class IcebergWriter(
           .outputMode("complete")
           .trigger(Trigger.ProcessingTime(1, TimeUnit.MINUTES))
           .option("checkpointLocation", checkpointLocation)
+          .option("partitioning", partitionColumnNames.getOrElse(Seq.empty).mkString(","))
           .toTable(output_identifier)
 
     }
