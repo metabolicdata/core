@@ -104,7 +104,7 @@ class IcebergWriter(
     // Run create table statement (will do nothing if table already exists)
     spark.sql(createTableStmt)
 
-    writeMode match {∫
+    writeMode match {
       case WriteMode.Append =>
         df
           .writeStream
