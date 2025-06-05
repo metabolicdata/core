@@ -85,7 +85,26 @@ class IcebergWriter(
 
   override def writeStream(df: DataFrame): StreamingQuery = {
 
-    writeMode match {
+    val partitionClause = partitionColumnNames match {
+      case Some(cols) if cols.nonEmpty =>
+        val partitionCols = cols.mkString(", ")
+        s"PARTITIONED BY ($partitionCols)"
+      case _ =>
+        "" // no partitioning
+    }
+
+    val createTableStmt = s"""
+    CREATE TABLE IF NOT EXISTS $output_identifier (
+        ${df.schema.fields.map(f => s"${f.name} ${f.dataType.sql}").mkString(", ")}
+      )
+      USING iceberg
+      $partitionClause
+    """
+
+    // Run create table statement (will do nothing if table already exists)
+    spark.sql(createTableStmt)
+
+    writeMode match {∫
       case WriteMode.Append =>
         df
           .writeStream
@@ -93,7 +112,6 @@ class IcebergWriter(
           .outputMode("append")
           .trigger(Trigger.ProcessingTime(1, TimeUnit.MINUTES))
           .option("checkpointLocation", checkpointLocation)
-          .option("partitioning", partitionColumnNames.getOrElse(Seq.empty).mkString(","))
           .toTable(output_identifier)
 
       case WriteMode.Complete =>
@@ -103,7 +121,6 @@ class IcebergWriter(
           .outputMode("complete")
           .trigger(Trigger.ProcessingTime(1, TimeUnit.MINUTES))
           .option("checkpointLocation", checkpointLocation)
-          .option("partitioning", partitionColumnNames.getOrElse(Seq.empty).mkString(","))
           .toTable(output_identifier)
 
     }
