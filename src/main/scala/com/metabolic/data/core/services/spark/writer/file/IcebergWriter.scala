@@ -14,64 +14,69 @@ class IcebergWriter(
                      val idColumnNames: Option[Seq[String]],
                      val checkpointLocation: String,
                      val partitionColumnNames: Option[Seq[String]] = None)
-                   (implicit  val spark: SparkSession)
+                   (implicit val spark: SparkSession)
   extends DataframeUnifiedWriter {
 
   override val output_identifier: String = fqn
 
   private val idColumnNamesIceberg: String = idColumnNames.getOrElse(Seq.empty).toList.mkString(",")
 
+  private def createTableIfNotExists(df: DataFrame): Unit = {
+    val partitionClause = partitionColumnNames match {
+      case Some(cols) if cols.nonEmpty => s"PARTITIONED BY (${cols.mkString(", ")})"
+      case _ => ""
+    }
+
+    val schemaDefinition = df.schema.fields.map(f => s"${f.name} ${f.dataType.sql}").mkString(", ")
+
+    val createTableStmt =
+      s"""
+         |CREATE TABLE IF NOT EXISTS $output_identifier (
+         |  $schemaDefinition
+         |)
+         |USING iceberg
+         |$partitionClause
+         |""".stripMargin
+
+    spark.sql(createTableStmt)
+  }
+
   override def writeBatch(df: DataFrame): Unit = {
+
+    createTableIfNotExists(df)
 
     writeMode match {
       case WriteMode.Append =>
-        try {
-          df.writeTo(output_identifier).using("iceberg").create()
-        }catch {
-          case e: AnalysisException =>
-            logger.info("Create table skipped: " + e)
-            df.writeTo(output_identifier).append()
-        }
+        df.writeTo(output_identifier).append()
 
       case WriteMode.Overwrite =>
-        try {
-          df.writeTo(output_identifier).using("iceberg").create()
-        }catch {
-          case e: AnalysisException =>
-            logger.info("Create table skipped: " + e)
-            df.writeTo(output_identifier).using("iceberg").replace()
-        }
+        df.writeTo(output_identifier).using("iceberg").replace()
 
       case WriteMode.Upsert =>
+
+        df.createOrReplaceTempView("merge_data_view")
         try {
-          df.writeTo(output_identifier).using("iceberg").create()
-        }catch {
-          case e: AnalysisException =>
-            logger.info("Create table skipped: " + e)
-            df.createOrReplaceTempView("merge_data_view")
-            try {
-              val keyColumns = idColumnNamesIceberg.replaceAll("\"", "").split(",")
-              val onCondition = if (keyColumns.length == 1) {
-                s"target.${keyColumns.head} = source.${keyColumns.head}"
-              } else {
-                keyColumns.map(column => s"target.$column = source.$column").mkString(" AND ")
-              }
-              // Merge DataFrame implementation is only available on spark > 4.0.0
-              val merge_query = {
-                f"""
+          val keyColumns = idColumnNamesIceberg.replaceAll("\"", "").split(",")
+          val onCondition = if (keyColumns.length == 1) {
+            s"target.${keyColumns.head} = source.${keyColumns.head}"
+          } else {
+            keyColumns.map(column => s"target.$column = source.$column").mkString(" AND ")
+          }
+          // Merge DataFrame implementation is only available on spark > 4.0.0
+          val merge_query = {
+            f"""
                 MERGE INTO $output_identifier AS target
                 USING merge_data_view AS source
                 ON $onCondition
                 WHEN MATCHED THEN UPDATE SET *
                 WHEN NOT MATCHED THEN INSERT *
                 """
-              }
-              spark.sql(merge_query)
-            } catch {
-              case e: Exception =>
-                logger.error(s"Error while performing upsert on $output_identifier: ${e.getMessage}")
-                throw e
-            }
+          }
+          spark.sql(merge_query)
+        } catch {
+          case e: Exception =>
+            logger.error(s"Error while performing upsert on $output_identifier: ${e.getMessage}")
+            throw e
         }
 
       case WriteMode.Delete =>
@@ -85,24 +90,7 @@ class IcebergWriter(
 
   override def writeStream(df: DataFrame): StreamingQuery = {
 
-    val partitionClause = partitionColumnNames match {
-      case Some(cols) if cols.nonEmpty =>
-        val partitionCols = cols.mkString(", ")
-        s"PARTITIONED BY ($partitionCols)"
-      case _ =>
-        "" // no partitioning
-    }
-
-    val createTableStmt = s"""
-    CREATE TABLE IF NOT EXISTS $output_identifier (
-        ${df.schema.fields.map(f => s"${f.name} ${f.dataType.sql}").mkString(", ")}
-      )
-      USING iceberg
-      $partitionClause
-    """
-
-    // Run create table statement (will do nothing if table already exists)
-    spark.sql(createTableStmt)
+    createTableIfNotExists(df)
 
     writeMode match {
       case WriteMode.Append =>
