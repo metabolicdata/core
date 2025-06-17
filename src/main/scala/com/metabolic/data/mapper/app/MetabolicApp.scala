@@ -46,11 +46,13 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
       .config("spark.sql.catalog.prod.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
       .config("spark.sql.catalog.prod.client.region", s"$client_region")
       .config("spark.sql.catalog.prod.warehouse", s"$warehouse_global")
+      .config("spark.sql.catalog.prod.http-client.apache.max-connections", "3000")
       .config("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
       .config("spark.sql.catalog.spark_catalog.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog")
       .config("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
       .config("spark.sql.catalog.spark_catalog.client.region", s"$client_region")
       .config("spark.sql.catalog.spark_catalog.warehouse", s"$warehouse_environment")
+      .config("spark.sql.catalog.spark_catalog.http-client.apache.max-connections", "3000")
       .config("spark.sql.defaultCatalog", "spark_catalog")
       .getOrCreate()
 
