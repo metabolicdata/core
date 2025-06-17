@@ -53,7 +53,6 @@ class IcebergWriter(
         df.writeTo(output_identifier).using("iceberg").replace()
 
       case WriteMode.Upsert =>
-
         df.createOrReplaceTempView("merge_data_view")
         try {
           val keyColumns = idColumnNamesIceberg.replaceAll("\"", "").split(",")

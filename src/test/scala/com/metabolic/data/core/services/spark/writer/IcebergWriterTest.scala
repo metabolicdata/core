@@ -204,7 +204,7 @@ class IcebergWriterTest extends AnyFunSuite
 
     val wm = WriteMode.Upsert
     val cpl = ""
-    val iceberg = new IcebergWriter(fqn, wm, Some(Seq("data2")), cpl)(spark)
+    val iceberg = new IcebergWriter(fqn, wm, Some(Seq("data")), cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
 
