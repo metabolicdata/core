@@ -47,7 +47,15 @@ class IcebergWriter(
 
     writeMode match {
       case WriteMode.Append =>
-        df.writeTo(output_identifier).append()
+        val supportEvolution =
+          s"""
+               |ALTER TABLE $output_identifier SET TBLPROPERTIES (
+               |  'write.spark.accept-any-schema'='true'
+               |)
+          """.stripMargin
+
+        spark.sql(supportEvolution)
+        df.writeTo(output_identifier).option("mergeSchema","true").append()
 
       case WriteMode.Overwrite =>
         df.writeTo(output_identifier).using("iceberg").replace()

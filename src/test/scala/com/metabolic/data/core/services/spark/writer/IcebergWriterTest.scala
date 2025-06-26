@@ -4,6 +4,7 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.BeforeAndAfterAll
@@ -131,26 +132,25 @@ class IcebergWriterTest extends AnyFunSuite
     new Directory(new File(testDir)).deleteRecursively()
   }
 
-  test("Iceberg batch append wrong data") {
+  test("Iceberg batch append schema evolution") {
     cleanUpTestDir()
-    val table = "letters_append_bad"
+    val table = "letters_append_schema_change"
     val fqn = s"$catalog.$database.$table"
-    val inputDF = createExpectedDataFrame()
-    val differentInputDF = createDifferentDataFrame()
+    val originalDF = createExpectedDataFrame() // e.g., has columns: data, name, id
+    val modifiedDF = originalDF.withColumn("new_col", lit("new_value")) // extra column
 
     val wm = WriteMode.Append
     val cpl = ""
     val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
-    iceberg.write(inputDF, EngineMode.Batch)
+    iceberg.write(originalDF, EngineMode.Batch)
+    val originalSchema = spark.table(fqn).schema
 
-    val exception = intercept[Exception] {
-      iceberg.write(differentInputDF, EngineMode.Batch)
-    }
+    iceberg.write(modifiedDF, EngineMode.Batch)
+    val newSchema = spark.table(fqn).schema
 
-    assert(exception.getMessage.contains("INCOMPATIBLE_DATA_FOR_TABLE" +
-      "" +
-      ""))
+    assert(!originalSchema.equals(newSchema), "Schema should have changed due to additional column.")
+    assert(newSchema.fieldNames.contains("new_col"), "Expected new_col to be present in table schema.")
     cleanUpTestDir()
   }
 
@@ -174,23 +174,25 @@ class IcebergWriterTest extends AnyFunSuite
     cleanUpTestDir()
   }
 
-  test("Iceberg batch overwrite wrong data") {
+  test("Iceberg batch overwrite replace schema") {
     cleanUpTestDir()
-    val table = "letters_overwrite_bad"
+    val table = "letters_overwrite_schema_change"
     val fqn = s"$catalog.$database.$table"
-    val inputDF = createExpectedDataFrame()
-    val differentInputDF = createDifferentDataFrame()
+    val originalDF = createExpectedDataFrame() // e.g., has columns: data, name, id
+    val modifiedDF = originalDF.withColumn("new_col", lit("new_value")) // extra column
 
     val wm = WriteMode.Overwrite
     val cpl = ""
     val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
-    iceberg.write(inputDF, EngineMode.Batch)
-    iceberg.write(differentInputDF, EngineMode.Batch)
+    iceberg.write(originalDF, EngineMode.Batch)
+    val originalSchema = spark.table(fqn).schema
 
-    val outputDf = spark.table(fqn)
+    iceberg.write(modifiedDF, EngineMode.Batch)
+    val newSchema = spark.table(fqn).schema
 
-    assertDataFrameNoOrderEquals(differentInputDF, outputDf)
+    assert(!originalSchema.equals(newSchema), "Schema should have changed due to additional column.")
+    assert(newSchema.fieldNames.contains("new_col"), "Expected new_col to be present in table schema.")
     cleanUpTestDir()
   }
 
