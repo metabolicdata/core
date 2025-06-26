@@ -5,6 +5,7 @@ import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
 import org.apache.iceberg.expressions.False
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.BeforeAndAfterAll
@@ -144,7 +145,6 @@ class IcebergWriterTest extends AnyFunSuite
     val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
-
     val exception = intercept[Exception] {
       iceberg.write(differentInputDF, EngineMode.Batch)
     }
@@ -235,6 +235,25 @@ class IcebergWriterTest extends AnyFunSuite
     val outputDf = spark.table(fqn)
 
     assertDataFrameNoOrderEquals(combinedDF, outputDf)
+    cleanUpTestDir()
+  }
+
+  test("Iceberg batch delete drops the table with purge") {
+    cleanUpTestDir()
+    val table = "letters_delete"
+    val fqn = s"$catalog.$database.$table"
+    val inputDF = createExpectedDataFrame()
+
+    val writerAppend = new IcebergWriter(fqn, WriteMode.Append, None, "")(spark)
+    writerAppend.write(inputDF, EngineMode.Batch)
+
+    assert(spark.catalog.tableExists(fqn))
+
+    val writerDelete = new IcebergWriter(fqn, WriteMode.Delete, None, "")(spark)
+    writerDelete.write(inputDF, EngineMode.Batch)
+
+    assert(!spark.catalog.tableExists(fqn))
+
     cleanUpTestDir()
   }
 
