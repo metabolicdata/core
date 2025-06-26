@@ -54,7 +54,19 @@ sink: {
 }
 ```
 
-Iceberg supports **append**, **overwrite** and **upsert** write modes.
+Iceberg supports ***append**, **overwrite**, **upsert** and **delete*** write modes. ***Upsert*** need an *idColumn* param to identify
+matching rows. ***Delete*** write mode only allows full table deletions, so schema and data are fully removed.
+
+Iceberg also supports Schema Evolution.
+
+Schema Evolution support by Write Mode:
+
+| Write Mode          | Schema Evolution Supported |
+|---------------------|----------------------------|
+| Append              | ✅ Yes                      |
+| Overwrite (REPLACE) | ✅ Yes                      |
+| Upsert (MERGE INTO) | ❌ No                       |
+| Delete              | N/A                        |
 
 ## Delta Lake
 
