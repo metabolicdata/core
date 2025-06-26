@@ -79,7 +79,14 @@ class IcebergWriter(
         }
 
       case WriteMode.Delete =>
-        throw new NotImplementedError("Delete is not supported in Iceberg yet")
+        try {
+          spark.sql(s"DROP TABLE IF EXISTS $output_identifier PURGE")
+          logger.info(s"Iceberg table $output_identifier has been dropped with PURGE.")
+        } catch {
+          case e: Exception =>
+            logger.error(s"Error while dropping table $output_identifier: ${e.getMessage}")
+            throw e
+        }
 
       case WriteMode.Update =>
         throw new NotImplementedError("Update is not supported in Iceberg yet")
