@@ -106,7 +106,6 @@ class IcebergWriter(
           .outputMode("append")
           .trigger(Trigger.ProcessingTime(1, TimeUnit.MINUTES))
           .option("checkpointLocation", checkpointLocation)
-          .option("mergeSchema","true")
           .toTable(output_identifier)
 
       case WriteMode.Complete =>
@@ -116,7 +115,6 @@ class IcebergWriter(
           .outputMode("complete")
           .trigger(Trigger.ProcessingTime(1, TimeUnit.MINUTES))
           .option("checkpointLocation", checkpointLocation)
-          .option("mergeSchema","true")
           .toTable(output_identifier)
 
     }

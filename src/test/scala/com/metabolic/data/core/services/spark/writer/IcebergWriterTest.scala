@@ -3,9 +3,7 @@ package com.metabolic.data.core.services.spark.writer
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import com.metabolic.data.core.services.spark.writer.file.IcebergWriter
 import com.metabolic.data.mapper.domain.io.{EngineMode, WriteMode}
-import org.apache.iceberg.expressions.False
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.BeforeAndAfterAll
@@ -145,6 +143,7 @@ class IcebergWriterTest extends AnyFunSuite
     val iceberg = new IcebergWriter(fqn, wm, None, cpl)(spark)
 
     iceberg.write(inputDF, EngineMode.Batch)
+
     val exception = intercept[Exception] {
       iceberg.write(differentInputDF, EngineMode.Batch)
     }
