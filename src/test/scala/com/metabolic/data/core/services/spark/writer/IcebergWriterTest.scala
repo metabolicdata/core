@@ -239,6 +239,40 @@ class IcebergWriterTest extends AnyFunSuite
     cleanUpTestDir()
   }
 
+  test("Iceberg batch upsert schema evolution") {
+    cleanUpTestDir()
+    val table = "letters_upsert_schema_evolution"
+    val fqn = s"$catalog.$database.$table"
+
+    val initialDF = spark.createDataFrame(Seq(
+      ("a", "apple"),
+      ("b", "banana")
+    )).toDF("data", "name")
+
+    val upsertWithNewColumnDF = spark.createDataFrame(Seq(
+      ("a", "apricot", "fruit"),
+      ("c", "carrot", "vegetable")
+    )).toDF("data", "name", "category")
+
+    val expectedDF = spark.createDataFrame(Seq(
+      ("a", "apricot", "fruit"),    // updated
+      ("b", "banana", null),        // untouched, no category
+      ("c", "carrot", "vegetable")  // new insert
+    )).toDF("data", "name", "category")
+
+    val wm = WriteMode.Upsert
+    val cpl = ""
+    val iceberg = new IcebergWriter(fqn, wm, Some(Seq("data")), cpl)(spark)
+
+    iceberg.write(initialDF, EngineMode.Batch)
+    iceberg.write(upsertWithNewColumnDF, EngineMode.Batch)
+
+    val outputDf = spark.table(fqn)
+
+    assertDataFrameNoOrderEquals(expectedDF, outputDf)
+    cleanUpTestDir()
+  }
+
   test("Iceberg batch delete drops the table with purge") {
     cleanUpTestDir()
     val table = "letters_delete"
