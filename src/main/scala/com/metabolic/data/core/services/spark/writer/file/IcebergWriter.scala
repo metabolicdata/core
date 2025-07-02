@@ -4,7 +4,7 @@ import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
-import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.util.concurrent.TimeUnit
 
@@ -49,18 +49,39 @@ class IcebergWriter(
       case WriteMode.Append =>
         val supportEvolution =
           s"""
-               |ALTER TABLE $output_identifier SET TBLPROPERTIES (
-               |  'write.spark.accept-any-schema'='true'
-               |)
+             |ALTER TABLE $output_identifier SET TBLPROPERTIES (
+             |  'write.spark.accept-any-schema'='true'
+             |)
           """.stripMargin
 
         spark.sql(supportEvolution)
-        df.writeTo(output_identifier).option("mergeSchema","true").append()
+        df.writeTo(output_identifier).option("mergeSchema", "true").append()
 
       case WriteMode.Overwrite =>
         df.writeTo(output_identifier).using("iceberg").replace()
 
       case WriteMode.Upsert =>
+        // Step 1: Alter table to include new columns from DataFrame
+        try {
+          val tableSchema = spark.table(output_identifier).schema
+          val incomingSchema = df.schema
+
+          val newColumns = incomingSchema.filterNot(f => tableSchema.fieldNames.contains(f.name))
+
+          newColumns.foreach { field =>
+            val columnName = field.name
+            val dataType = field.dataType.catalogString
+            val alterSQL = s"ALTER TABLE $output_identifier ADD COLUMN $columnName $dataType"
+            spark.sql(alterSQL)
+            logger.info(s"Added new column to $output_identifier: $columnName $dataType")
+          }
+        } catch {
+          case e: Exception =>
+            logger.error(s"Error during upsert schema evolution on $output_identifier: ${e.getMessage}")
+            throw e
+        }
+
+        // Step 2: Merge
         df.createOrReplaceTempView("merge_data_view")
         try {
           val keyColumns = idColumnNamesIceberg.replaceAll("\"", "").split(",")
@@ -69,16 +90,16 @@ class IcebergWriter(
           } else {
             keyColumns.map(column => s"target.$column = source.$column").mkString(" AND ")
           }
-          // Merge DataFrame implementation is only available on spark > 4.0.0
-          val merge_query = {
-            f"""
-                MERGE INTO $output_identifier AS target
-                USING merge_data_view AS source
-                ON $onCondition
-                WHEN MATCHED THEN UPDATE SET *
-                WHEN NOT MATCHED THEN INSERT *
-                """
-          }
+
+          val merge_query =
+            s"""
+               |MERGE INTO $output_identifier AS target
+               |USING merge_data_view AS source
+               |ON $onCondition
+               |WHEN MATCHED THEN UPDATE SET *
+               |WHEN NOT MATCHED THEN INSERT *
+               |""".stripMargin
+
           spark.sql(merge_query)
         } catch {
           case e: Exception =>
