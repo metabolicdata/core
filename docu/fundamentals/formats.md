@@ -65,7 +65,7 @@ Schema Evolution support by Write Mode:
 |---------------------|----------------------------|
 | Append              | ✅ Yes                      |
 | Overwrite (REPLACE) | ✅ Yes                      |
-| Upsert (MERGE INTO) | ❌ No                       |
+| Upsert (MERGE INTO) | ⚠️ Yes (only new columns)  |
 | Delete              | N/A                        |
 
 ## Delta Lake
