@@ -43,10 +43,10 @@ class IcebergWriter(
 
   override def writeBatch(df: DataFrame): Unit = {
 
-    createTableIfNotExists(df)
 
     writeMode match {
       case WriteMode.Append =>
+        createTableIfNotExists(df)
         val supportEvolution =
           s"""
              |ALTER TABLE $output_identifier SET TBLPROPERTIES (
@@ -58,9 +58,24 @@ class IcebergWriter(
         df.writeTo(output_identifier).option("mergeSchema", "true").append()
 
       case WriteMode.Overwrite =>
-        df.writeTo(output_identifier).using("iceberg").replace()
+        val partitionClause = partitionColumnNames match {
+          case Some(cols) if cols.nonEmpty => s"PARTITIONED BY (${cols.mkString(", ")})"
+          case _ => ""
+        }
+        df.createOrReplaceTempView("replace_data_view")
+
+        val replaceStmt =
+          s"""
+             |CREATE OR REPLACE TABLE $output_identifier
+             |USING iceberg
+             |$partitionClause
+             |AS SELECT * FROM replace_data_view
+             |""".stripMargin
+
+        spark.sql(replaceStmt)
 
       case WriteMode.Upsert =>
+        createTableIfNotExists(df)
         // Step 1: Alter table to include new columns from DataFrame
         try {
           val tableSchema = spark.table(output_identifier).schema
@@ -101,6 +116,7 @@ class IcebergWriter(
                |""".stripMargin
 
           spark.sql(merge_query)
+
         } catch {
           case e: Exception =>
             logger.error(s"Error while performing upsert on $output_identifier: ${e.getMessage}")
