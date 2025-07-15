@@ -60,14 +60,22 @@ class IcebergWriter(
         df.writeTo(output_identifier).option("mergeSchema", "true").append()
 
       case WriteMode.Overwrite =>
-        partitionColumnNames match {
-          case Some(cols) if cols.nonEmpty =>
-            val partitionColumns: List[String] = List(cols.mkString(", "))
-            val partitionCols: List[org.apache.spark.sql.Column] = partitionColumns.map(col)
-
-            df.writeTo(output_identifier).using("iceberg").partitionedBy(partitionCols.head, partitionCols.tail: _*).replace()
-          case _ => df.writeTo(output_identifier).using("iceberg").replace()
+        val partitionClause = partitionColumnNames match {
+          case Some(cols) if cols.nonEmpty => s"PARTITIONED BY (${cols.mkString(", ")})"
+          case _ => ""
         }
+        df.createOrReplaceTempView("replace_data_view")
+
+        val replaceStmt =
+          s"""
+             |REPLACE TABLE $output_identifier
+             |USING iceberg
+             |$partitionClause
+             |OPTIONS ('format-version'='2')
+             |AS SELECT * FROM replace_data_view
+             |""".stripMargin
+
+        spark.sql(replaceStmt)
 
       case WriteMode.Upsert =>
         // Step 1: Alter table to include new columns from DataFrame
