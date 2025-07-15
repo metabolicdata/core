@@ -62,7 +62,7 @@ class IcebergWriter(
       case WriteMode.Overwrite =>
         partitionColumnNames match {
           case Some(cols) if cols.nonEmpty =>
-            val partitionColumns: List[String] = List("year", "month", "day")
+            val partitionColumns: List[String] = List(cols.mkString(", "))
             val partitionCols: List[org.apache.spark.sql.Column] = partitionColumns.map(col)
 
             df.writeTo(output_identifier).using("iceberg").partitionedBy(partitionCols.head, partitionCols.tail: _*).replace()
