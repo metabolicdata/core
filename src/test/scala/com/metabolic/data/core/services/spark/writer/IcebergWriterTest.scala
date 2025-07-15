@@ -225,6 +225,13 @@ class IcebergWriterTest extends AnyFunSuite
     val upsertedInputDF = createUpsertedDataFrame()
     val combinedDF = createCombinedDataFrame()
 
+    //test append for compatibility with other tables
+    val wm2 = WriteMode.Append
+    val cpl2 = ""
+    val iceberg2 = new IcebergWriter(fqn, wm2, None, cpl2)(spark)
+
+    iceberg2.write(inputDF, EngineMode.Batch)
+
     val wm = WriteMode.Upsert
     val cpl = ""
     val iceberg = new IcebergWriter(fqn, wm, Some(Seq("data","name")), cpl)(spark)
