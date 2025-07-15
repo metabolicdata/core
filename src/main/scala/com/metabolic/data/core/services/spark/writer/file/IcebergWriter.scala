@@ -3,6 +3,7 @@ package com.metabolic.data.core.services.spark.writer.file
 import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -43,10 +44,10 @@ class IcebergWriter(
 
   override def writeBatch(df: DataFrame): Unit = {
 
+    createTableIfNotExists(df)
 
     writeMode match {
       case WriteMode.Append =>
-        createTableIfNotExists(df)
         val supportEvolution =
           s"""
              |ALTER TABLE $output_identifier SET TBLPROPERTIES (
@@ -55,29 +56,31 @@ class IcebergWriter(
           """.stripMargin
 
         spark.sql(supportEvolution)
+
         df.writeTo(output_identifier).option("mergeSchema", "true").append()
 
       case WriteMode.Overwrite =>
-        val partitionClause = partitionColumnNames match {
-          case Some(cols) if cols.nonEmpty => s"PARTITIONED BY (${cols.mkString(", ")})"
-          case _ => ""
+        partitionColumnNames match {
+          case Some(cols) if cols.nonEmpty =>
+            val partitionColumns: List[String] = List("year", "month", "day")
+            val partitionCols: List[org.apache.spark.sql.Column] = partitionColumns.map(col)
+
+            df.writeTo(output_identifier).using("iceberg").partitionedBy(partitionCols.head, partitionCols.tail: _*).replace()
+          case _ => df.writeTo(output_identifier).using("iceberg").replace()
         }
-        df.createOrReplaceTempView("replace_data_view")
-
-        val replaceStmt =
-          s"""
-             |CREATE OR REPLACE TABLE $output_identifier
-             |USING iceberg
-             |$partitionClause
-             |AS SELECT * FROM replace_data_view
-             |""".stripMargin
-
-        spark.sql(replaceStmt)
 
       case WriteMode.Upsert =>
-        createTableIfNotExists(df)
         // Step 1: Alter table to include new columns from DataFrame
         try {
+          val disableEvolution =
+            s"""
+               |ALTER TABLE $output_identifier SET TBLPROPERTIES (
+               |  'write.spark.accept-any-schema'='false'
+               |)
+          """.stripMargin
+
+          spark.sql(disableEvolution)
+
           val tableSchema = spark.table(output_identifier).schema
           val incomingSchema = df.schema
 
