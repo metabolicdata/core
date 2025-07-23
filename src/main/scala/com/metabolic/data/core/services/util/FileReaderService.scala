@@ -47,7 +47,7 @@ class FileReaderService(implicit val region: Regions) extends Logging {
 
     } catch {
       case e: AmazonServiceException => {
-        val errorMsg = s"AmazonServiceException (likely AmazonS3Exception), ${e.getMessage} for key $path"
+        val errorMsg = s"AmazonServiceException (likely AmazonS3Exception), ${e.getMessage} for key ${path}"
         logger.error(errorMsg)
         throw new RuntimeException(errorMsg, e)
       }
