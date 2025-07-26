@@ -49,6 +49,10 @@ class KafkaWriter(
       .options(commonKafkaOptions ++ authOptions)
       .option("checkpointLocation", checkpointLocation)
       .option("failOnDataLoss", value = false)
+      .option("kafka.request.timeout.ms", "300000")         // 5 minutes
+      .option("kafka.delivery.timeout.ms", "300000")        // Must be >= request.timeout.ms
+      .option("kafka.retries", "10")
+      .option("kafka.retry.backoff.ms", "1000")
       .start()
   }
 
