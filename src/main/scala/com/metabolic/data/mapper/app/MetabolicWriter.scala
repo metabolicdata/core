@@ -121,6 +121,12 @@ object MetabolicWriter extends Logging {
           case cols => Some(cols.distinct)
         }
 
+        val table.writeMode = if (historical) {
+          WriteMode.Overwrite
+        } else {
+          table.writeMode
+        }
+
         new IcebergWriter(table.catalog, table.writeMode, table.idColumnNames, checkpointPath, partitionColsOpt)
           .write(_df, mode)
 
