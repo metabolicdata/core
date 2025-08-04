@@ -45,6 +45,8 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .option("startingOffsets", "latest")
       .option("groupIdPrefix",s"metabolic-stream-${consumerGroup}")
       .option("failOnDataLoss", false)
+      .option("kafka.max.partition.fetch.bytes", "2097152")
+      .option("kafka.fetch.max.bytes", "4194304")
 
 
     val input = setStreamAuthentication(plain)
