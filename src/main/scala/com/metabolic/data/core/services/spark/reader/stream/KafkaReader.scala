@@ -44,7 +44,7 @@ class KafkaReader(val servers: Seq[String], apiKey: String, apiSecret: String, t
       .option("kafka.client.dns.lookup","use_all_dns_ips")
       .option("startingOffsets", "latest")
       .option("groupIdPrefix",s"metabolic-stream-${consumerGroup}")
-      .option("maxOffsetsPerTrigger", "5000")
+      .option("maxOffsetsPerTrigger", "1000000")
 
     val input = setStreamAuthentication(plain)
       .load()
