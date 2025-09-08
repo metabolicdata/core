@@ -40,7 +40,7 @@ class GlueCrawlerAction extends AfterAction with Logging {
           case com.metabolic.data.mapper.domain.io.IOFormat.KAFKA =>
             logger.info(f"After Action $name: Skipping Glue Crawler for ${config.name} for KafkaSink")
           case com.metabolic.data.mapper.domain.io.IOFormat.TABLE =>
-            logger.info(f"After Action $name: Skipping Glue Crawler for ${config.name} for DeltaSink")
+            logger.info(f"After Action $name: Skipping Glue Crawler for ${config.name} for TableSink")
         }
       case _ =>
         logger.info(f"After Action: Skipping $crawlerName for ${config.name} as it is not a FileSink")

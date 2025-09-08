@@ -1,9 +1,7 @@
 package com.metabolic.data.mapper.app
 
 import com.amazonaws.regions.Regions
-import com.metabolic.data.core.services.athena.AthenaAction
 import com.metabolic.data.core.services.catalogue.AtlanCatalogueAction
-import com.metabolic.data.core.services.glue.GlueCrawlerAction
 import com.metabolic.data.core.services.spark.udfs.MetabolicUserDefinedFunction
 import com.metabolic.data.core.services.util.ConfigReaderService
 import com.metabolic.data.mapper.domain._
@@ -62,8 +60,9 @@ class MetabolicApp(sparkBuilder: SparkSession.Builder) extends Logging {
     }
 
     val actions = Seq[AfterAction](
-      new AthenaAction(),
-      new GlueCrawlerAction(),
+      // New Iceberg compatibility allows to remove AWS Glue Catalog Actions
+      //new AthenaAction(),
+      //new GlueCrawlerAction(),
       new AtlanCatalogueAction()
     )
 
