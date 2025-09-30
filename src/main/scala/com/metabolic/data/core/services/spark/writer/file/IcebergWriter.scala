@@ -1,9 +1,9 @@
 package com.metabolic.data.core.services.spark.writer.file
 
 import com.metabolic.data.core.services.spark.writer.DataframeUnifiedWriter
+import com.metabolic.data.mapper.app.MetabolicWriter.logger
 import com.metabolic.data.mapper.domain.io.WriteMode
 import com.metabolic.data.mapper.domain.io.WriteMode.WriteMode
-import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -57,6 +57,7 @@ class IcebergWriter(
 
         spark.sql(supportEvolution)
 
+        logger.info(s"Appending table $output_identifier")
         df.writeTo(output_identifier).option("mergeSchema", "true").append()
 
       case WriteMode.Overwrite =>
@@ -75,6 +76,7 @@ class IcebergWriter(
              |AS SELECT * FROM replace_data_view
              |""".stripMargin
 
+        logger.info(s"Overwriting table $output_identifier with SQL: $replaceStmt")
         spark.sql(replaceStmt)
 
       case WriteMode.Upsert =>
@@ -126,6 +128,7 @@ class IcebergWriter(
                |WHEN NOT MATCHED THEN INSERT *
                |""".stripMargin
 
+          logger.info(s"Upserting table $output_identifier with SQL: $merge_query")
           spark.sql(merge_query)
 
         } catch {
