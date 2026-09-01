@@ -18,11 +18,13 @@ class KafkaWriter(
   override val output_identifier: String = topic
   override val writeMode: WriteMode = WriteMode.Append
 
-  private val commonKafkaOptions: Map[String, String] = Map(
+  private[writer] val commonKafkaOptions: Map[String, String] = Map(
     "kafka.bootstrap.servers" -> servers.mkString(","),
     "topic" -> topic,
     "kafka.session.timeout.ms" -> "45000",
-    "kafka.client.dns.lookup" -> "use_all_dns_ips"
+    "kafka.client.dns.lookup" -> "use_all_dns_ips",
+    "kafka.compression.type" -> "zstd",
+    "kafka.batch.size" -> "262144"
   )
 
   private val authOptions: Map[String, String] =

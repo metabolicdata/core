@@ -88,4 +88,19 @@ class KafkaWriterTest extends AnyFunSuite
 
     assertDataFrameEquals(sortedExpected, sortedActual)
   }
+
+  test("KafkaWriter sets producer compression so payloads are not sent raw") {
+
+    val writer = new KafkaWriter(
+      servers = Seq("localhost:9092"),
+      apiKey = "",
+      apiSecret = "",
+      topic = topicName,
+      idColumnName = None,
+      checkpointLocation = "/tmp/unused"
+    )
+
+    assert(writer.commonKafkaOptions.get("kafka.compression.type").contains("zstd"))
+    assert(writer.commonKafkaOptions("kafka.batch.size").toInt > 16384)
+  }
 }
